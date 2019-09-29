@@ -1,4 +1,3 @@
-import { getNameOfLevel } from "./level";
 import { loggable_type } from "./type";
 import { LogContext } from "./context";
 import { createToken, LogTokens, token_type } from "./token";
@@ -25,9 +24,5 @@ export type Parsers = { [P in loggable_type]? : parse<P> };
 
 
 export const parsers:Parsers = {
-	[loggable_type.string] : (message, context) : LogTokens => [
-		createToken(token_type.time, context.time),
-		createToken(token_type.level, getNameOfLevel(context.level)),
-		createToken(token_type.message, message)
-	]
+	[loggable_type.string] : message => [ createToken(token_type.message, message) ]
 };
