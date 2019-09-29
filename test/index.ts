@@ -106,7 +106,7 @@ describe('onceupon', () => {
 		await log.log('foo', log_level.notice);
 
 		assert.deepStrictEqual(msg, [
-			'1 warn foo',
+			'1 warn   foo',
 			'2 notice foo'
 		]);
 	});
@@ -121,7 +121,8 @@ describe('onceupon', () => {
 				[ loggable_type.any] : (loggable:any, context:LogContext) : LogTokens => [
 					createToken(token_type.message, context.type)
 				]
-			}
+			},
+			decorate : tokens => tokens
 		});
 
 		await log.log(undefined);
