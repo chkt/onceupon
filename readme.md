@@ -41,6 +41,7 @@ const logger = onceupon({
     time : AsyncIterator<string>,
     infer : (loggable:any) => loggable_type,
     parsers : { [P in loggable_type]? : parse<P> },
+    decorate : (tokens:LogTokens, context:LogContext) => LogTokens,
     handle : (tokens:LogTokens, context:LogContext) => Promise<void>
 });
 ```
