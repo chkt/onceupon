@@ -48,7 +48,7 @@ export function createStreamHandler(streams:Streams) : handleLog {
 		const stream = streams[context.level];
 
 		return new Promise((resolve, reject) => {
-			stream.write(msg, err => err === undefined ? resolve() : reject());
+			stream.write(`${ msg }\n`, err => err === undefined ? resolve() : reject());
 		});
 	};
 }

@@ -146,16 +146,16 @@ describe('onceupon', () => {
 		await log.log('aarg', log_level.fatal);
 
 		assert.deepStrictEqual(out.out, [
-			{ chunk : '1 debug   foo', encoding : 'buffer' },
-			{ chunk : '2 verbose bar', encoding : 'buffer' },
-			{ chunk : '3 info    baz', encoding : 'buffer' },
-			{ chunk : '4 notice  qux', encoding : 'buffer' },
+			{ chunk : '1 debug   foo\n', encoding : 'buffer' },
+			{ chunk : '2 verbose bar\n', encoding : 'buffer' },
+			{ chunk : '3 info    baz\n', encoding : 'buffer' },
+			{ chunk : '4 notice  qux\n', encoding : 'buffer' },
 		]);
 
 		assert.deepStrictEqual(err.out, [
-			{ chunk : '5 warn    bang', encoding : 'buffer' },
-			{ chunk : '6 error   bam' , encoding : 'buffer' },
-			{ chunk : '7 fatal   aarg', encoding : 'buffer' }
+			{ chunk : '5 warn    bang\n', encoding : 'buffer' },
+			{ chunk : '6 error   bam\n' , encoding : 'buffer' },
+			{ chunk : '7 fatal   aarg\n', encoding : 'buffer' }
 		]);
 	});
 
