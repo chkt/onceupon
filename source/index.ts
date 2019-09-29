@@ -5,7 +5,7 @@ import { parse, Parsers } from "./parse";
 import { getConfig, getDefaultConfig, LoggerConfig } from "./config";
 
 
-interface Logger {
+export interface Logger {
 	log(loggable:any, level?:log_level, tags?:string[]) : Promise<void>;
 	update(settings:Partial<LoggerConfig>) : void;
 }
@@ -30,7 +30,7 @@ function createLogger(config:LoggerConfig) : Logger {
 
 			const time = (await config.time.next()).value;
 			const context = createLogContext(time, level, type, tags);
-			const tokens = parser(loggable, context);
+			const tokens = config.decorate(parser(loggable, context), context);
 
 			return config.handle(tokens, context);
 		},
