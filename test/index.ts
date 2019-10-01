@@ -101,7 +101,7 @@ describe('onceupon', () => {
 		assert.strictEqual(msg, '1 notice foo');
 	});
 
-	it('shoud log a string message to the assigned console method', async () => {
+	it('should log a string message to the assigned console method', async () => {
 		const msg:string[] = [];
 
 		const log = logger({
@@ -128,7 +128,7 @@ describe('onceupon', () => {
 		]);
 	});
 
-	it('should log a string message to an arbitrary assigned stream', async () => {
+	it('should log a string message to an arbitrarily assigned stream', async () => {
 		const out = new MockStream();
 		const err = new MockStream();
 		const log = logger({
@@ -214,6 +214,63 @@ describe('onceupon', () => {
 			loggable_type.boolean, loggable_type.number, loggable_type.bigint,
 			loggable_type.string, loggable_type.symbol,
 			loggable_type.function, loggable_type.array, loggable_type.object, loggable_type.error
+		]);
+	});
+
+	it('should decorate with tags', async () => {
+		const msg:string[] = [];
+		const log = logger({
+			time : getIncrement(),
+			handle : async (tokens:LogTokens) : Promise<void> => {
+				msg.push(tokensToString(tokens));
+			}
+		});
+
+		await log.log('foo', log_level.notice, 'bar');
+		await log.log('foo', log_level.notice, 'bar baz');
+
+		assert.deepStrictEqual(msg, [
+			'1 notice foo bar',
+			'2 notice foo bar baz'
+		]);
+	});
+
+	it('should decorate with default tags', async () => {
+		const msg:string[] = [];
+		const log = logger({
+			tags : 'quux',
+			time : getIncrement(),
+			handle : async (tokens:LogTokens) : Promise<void> => {
+				msg.push(tokensToString(tokens));
+			}
+		});
+
+		await log.log('foo', log_level.notice);
+		await log.log('foo', log_level.notice, 'bar');
+		await log.log('foo', log_level.notice, 'bar baz');
+		await log.log('foo', log_level.notice, 'baz quux');
+
+		assert.deepStrictEqual(msg, [
+			'1 notice foo quux',
+			'2 notice foo quux bar',
+			'3 notice foo quux bar baz',
+			'4 notice foo quux baz'
+		]);
+	});
+
+	it('format tags', async () => {
+		const msg:string[] = [];
+		const log = logger({
+			tags : 'baz quux',
+			time : getIncrement()
+		});
+
+		msg.push(await mockConsole('log', () => log.log('foo')));
+		msg.push(await mockConsole('log', () => log.log('foo', log_level.notice, 'bar baz')));
+
+		assert.deepStrictEqual(msg, [
+			'1 notice  foo .:baz:quux',
+			'2 notice  foo .:baz:quux:bar'
 		]);
 	});
 });
