@@ -21,7 +21,7 @@ const logger = onceupon();
 async () => {
     logger.log('foo');
     logger.log([1, 2, 3], log_level.warn);
-    await logger.log(new Error(), log_level.error, [ 'reporting', 'api' ]);
+    await logger.log(new Error(), log_level.error, 'reporting api');
 }
 ```
 
@@ -38,6 +38,7 @@ import { parse } from '@chkt/onceuppn/dist/parse';
 
 const logger = onceupon({
     threshold : log_level,
+    tags : string,
     time : AsyncIterator<string>,
     infer : (loggable:any) => loggable_type,
     parsers : { [P in loggable_type]? : parse<P> },
