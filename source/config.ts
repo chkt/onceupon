@@ -8,6 +8,7 @@ import { consoleHandler, handleLog } from "./handler";
 
 export interface LoggerConfig {
 	readonly threshold : log_level;
+	readonly tags : string;
 	readonly infer : inferType;
 	readonly parsers : Parsers;
 	readonly decorate : decorateTokens;
@@ -19,6 +20,7 @@ export interface LoggerConfig {
 export function getDefaultConfig() : LoggerConfig {
 	return {
 		threshold : log_level.notice,
+		tags : '',
 		infer : getType,
 		parsers,
 		decorate : decorateTimeLevelLog,
