@@ -1,12 +1,13 @@
 import { isLevelWithinThreshold, log_level } from "./level";
 import { loggable_type } from "./type";
+import { extendTags } from "./tags";
 import { createLogContext } from "./context";
 import { parse, Parsers } from "./parse";
 import { getConfig, getDefaultConfig, LoggerConfig } from "./config";
 
 
 export interface Logger {
-	log(loggable:any, level?:log_level, tags?:string[]) : Promise<void>;
+	log(loggable:any, level?:log_level, tags?:string) : Promise<void>;
 	update(settings:Partial<LoggerConfig>) : void;
 }
 
@@ -18,9 +19,9 @@ function getParser<P extends loggable_type>(parsers:Parsers, type:P) : parse<P>|
 }
 
 
-function createLogger(config:LoggerConfig) : Logger {
+function createLogger(config:LoggerConfig, baseTags:string[]) : Logger {
 	return {
-		async log(loggable, level:log_level = log_level.notice, tags:string[] = []) : Promise<void> {
+		async log(loggable, level:log_level = log_level.notice, tags:string = '') : Promise<void> {
 			if (!isLevelWithinThreshold(level, config.threshold)) return;
 
 			const type = config.infer(loggable);
@@ -29,7 +30,7 @@ function createLogger(config:LoggerConfig) : Logger {
 			if (parser === null) return;
 
 			const time = (await config.time.next()).value;
-			const context = createLogContext(time, level, type, tags);
+			const context = createLogContext(time, level, type, extendTags(baseTags, tags));
 			const tokens = config.decorate(parser(loggable, context), context);
 
 			return config.handle(tokens, context);
@@ -43,6 +44,7 @@ function createLogger(config:LoggerConfig) : Logger {
 
 export default function(settings:Partial<LoggerConfig> = {}) : Logger {
 	const config = getConfig(settings, getDefaultConfig());
+	const tags = extendTags([], config.tags);
 
-	return createLogger(config);
+	return createLogger(config, tags);
 }
