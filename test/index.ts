@@ -101,6 +101,27 @@ describe('onceupon', () => {
 		assert.strictEqual(msg, '1 notice foo');
 	});
 
+	it ('should allow arbitrary parsers', async () => {
+		const msgs:string[] = [];
+		const log = logger({
+			time : getIncrement(),
+			parsers : {
+				[ loggable_type.string ] : message => [ createToken(token_type.message, message) ]
+			},
+			handle : async (tokens:LogTokens) => {
+				msgs.push(tokensToString(tokens));
+			}
+		});
+
+		await log.log('foo');
+		await log.log(1);
+
+		assert.deepStrictEqual(msgs, [
+			'1 notice foo',
+			'2 notice <NOPARSE fnum>'
+		]);
+	});
+
 	it('should log a string message to the assigned console method', async () => {
 		const msg:string[] = [];
 
@@ -258,7 +279,7 @@ describe('onceupon', () => {
 		]);
 	});
 
-	it('format tags', async () => {
+	it('should format tags when using the default handler', async () => {
 		const msg:string[] = [];
 		const log = logger({
 			tags : 'baz quux',
