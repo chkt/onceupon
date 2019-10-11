@@ -1,9 +1,8 @@
 import { isLevelWithinThreshold, log_level } from "./level";
-import { loggable_type } from "./type";
 import { extendTags } from "./tags";
 import { createLogContext } from "./context";
-import { parse, Parsers } from "./parse";
-import { getConfig, getDefaultConfig, LoggerConfig } from "./config";
+import { getParser } from "./parse";
+import { getSettings, getDefaultConfig, LoggerConfig, LoggerSettings } from "./config";
 
 
 export interface Logger {
@@ -12,39 +11,27 @@ export interface Logger {
 }
 
 
-function getParser<P extends loggable_type>(parsers:Parsers, type:P) : parse<P>|null {
-	if (type in parsers) return parsers[type] as parse<P>;
-	else if (loggable_type.any in parsers) return parsers[loggable_type.any] as parse<loggable_type.any>;
-	else return null;
-}
-
-
-function createLogger(config:LoggerConfig, baseTags:string[]) : Logger {
+function createLogger(settings:LoggerSettings) : Logger {
 	return {
 		async log(loggable, level:log_level = log_level.notice, tags:string = '') : Promise<void> {
-			if (!isLevelWithinThreshold(level, config.threshold)) return;
+			if (!isLevelWithinThreshold(level, settings.threshold)) return;
 
-			const type = config.infer(loggable);
-			const parser = getParser(config.parsers, type);
+			const type = settings.infer(loggable);
+			const parser = getParser(settings.parsers, type);
+			const context = await createLogContext(settings, level, type, extendTags(settings.baseTags, tags));
+			const tokens = settings.decorate(parser(loggable, context), context);
 
-			if (parser === null) return;
-
-			const time = (await config.time.next()).value;
-			const context = createLogContext(time, level, type, extendTags(baseTags, tags));
-			const tokens = config.decorate(parser(loggable, context), context);
-
-			return config.handle(tokens, context);
+			return settings.handle(tokens, context);
 		},
-		update(settings) {
-			config = getConfig(settings, config);
+		update(config) {
+			settings = getSettings(config, settings);
 		}
 	};
 }
 
 
 export default function(settings:Partial<LoggerConfig> = {}) : Logger {
-	const config = getConfig(settings, getDefaultConfig());
-	const tags = extendTags([], config.tags);
+	const config = getSettings(settings, getDefaultConfig());
 
-	return createLogger(config, tags);
+	return createLogger(config);
 }
