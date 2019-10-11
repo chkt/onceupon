@@ -1,6 +1,7 @@
 import { loggable_type } from "./type";
 import { LogContext } from "./context";
 import { createToken, LogTokens, token_type } from "./token";
+import { parseFail } from "./failure";
 
 
 export interface TypeMap {
@@ -26,3 +27,10 @@ export type Parsers = { [P in loggable_type]? : parse<P> };
 export const parsers:Parsers = {
 	[loggable_type.string] : message => [ createToken(token_type.message, message) ]
 };
+
+
+export function getParser<P extends loggable_type>(parserCollection:Parsers, type:P) : parse<P> {
+	if (type in parserCollection) return parserCollection[type] as parse<P>;
+	else if (loggable_type.any in parserCollection) return parserCollection[loggable_type.any] as parse<loggable_type.any>;
+	else return parseFail.bind(null, type);
+}
