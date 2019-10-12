@@ -61,8 +61,10 @@ describe('onceupon', () => {
 		const log = logger();
 
 		assert(typeof log === 'object');
-		assert('log' in log);
-		assert(typeof log.log === 'function');
+		assert('message' in log);
+		assert(typeof log.message === 'function');
+		assert('value' in log);
+		assert(typeof log.value === 'function');
 		assert('update' in log);
 		assert(typeof log.update === 'function');
 	});
@@ -70,10 +72,10 @@ describe('onceupon', () => {
 	it('should log a string message to console', async () => {
 		const log = logger();
 		const msg = await mockConsole('log', () => {
-			return log.log('foo');
+			return log.message('foo');
 		});
 
-		assert(msg.search(/^\d{2}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z notice foo$/) !== 0);
+		assert(msg.search(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z notice\s{2}foo$/) === 0);
 	});
 
 	it('should allow arbitrary time sources', async () => {
@@ -81,7 +83,7 @@ describe('onceupon', () => {
 			time : getIncrement()
 		});
 		const msg = await mockConsole('log', () => {
-			return log.log('foo');
+			return log.message('foo');
 		});
 
 		assert.strictEqual(msg, '1 notice  foo');
@@ -96,7 +98,7 @@ describe('onceupon', () => {
 			}
 		});
 
-		await log.log('foo');
+		await log.message('foo');
 
 		assert.strictEqual(msg, '1 notice foo');
 	});
@@ -106,15 +108,15 @@ describe('onceupon', () => {
 		const log = logger({
 			time : getIncrement(),
 			parsers : {
-				[ loggable_type.string ] : message => [ createToken(token_type.message, message) ]
+				[ loggable_type.string ] : message => [ createToken(token_type.message_fragment, message) ]
 			},
 			handle : async (tokens:LogTokens) => {
 				msgs.push(tokensToString(tokens));
 			}
 		});
 
-		await log.log('foo');
-		await log.log(1);
+		await log.value('foo');
+		await log.value(1);
 
 		assert.deepStrictEqual(msgs, [
 			'1 notice foo',
@@ -130,13 +132,13 @@ describe('onceupon', () => {
 			time : getIncrement()
 		});
 
-		msg.push(await mockConsole('debug', () => log.log('foo', log_level.debug)));
-		msg.push(await mockConsole('log', () => log.log('bar', log_level.verbose)));
-		msg.push(await mockConsole('log', () => log.log('baz', log_level.info)));
-		msg.push(await mockConsole('log', () => log.log('qux', log_level.notice)));
-		msg.push(await mockConsole('warn', () => log.log('bang', log_level.warn)));
-		msg.push(await mockConsole('error', () => log.log('bam', log_level.error)));
-		msg.push(await mockConsole('error', () => log.log('aarg', log_level.fatal)));
+		msg.push(await mockConsole('debug', () => log.message('foo', log_level.debug)));
+		msg.push(await mockConsole('log', () => log.message('bar', log_level.verbose)));
+		msg.push(await mockConsole('log', () => log.message('baz', log_level.info)));
+		msg.push(await mockConsole('log', () => log.message('qux', log_level.notice)));
+		msg.push(await mockConsole('warn', () => log.message('bang', log_level.warn)));
+		msg.push(await mockConsole('error', () => log.message('bam', log_level.error)));
+		msg.push(await mockConsole('error', () => log.message('aarg', log_level.fatal)));
 
 		assert.deepStrictEqual(msg, [
 			'1 debug   foo',
@@ -158,13 +160,13 @@ describe('onceupon', () => {
 			handle : createOutErrHandler(out, err)
 		});
 
-		await log.log('foo', log_level.debug);
-		await log.log('bar', log_level.verbose);
-		await log.log('baz', log_level.info);
-		await log.log('qux', log_level.notice);
-		await log.log('bang', log_level.warn);
-		await log.log('bam', log_level.error);
-		await log.log('aarg', log_level.fatal);
+		await log.message('foo', log_level.debug);
+		await log.message('bar', log_level.verbose);
+		await log.message('baz', log_level.info);
+		await log.message('qux', log_level.notice);
+		await log.message('bang', log_level.warn);
+		await log.message('bam', log_level.error);
+		await log.message('aarg', log_level.fatal);
 
 		assert.deepStrictEqual(out.out, [
 			{ chunk : '1 debug   foo\n', encoding : 'buffer' },
@@ -190,16 +192,21 @@ describe('onceupon', () => {
 			threshold : log_level.warn
 		});
 
-		await log.log('foo', log_level.notice);
-		await log.log('foo', log_level.warn);
+		await log.message('foo', log_level.notice);
+		await log.value('bar', log_level.notice);
+		await log.message('baz', log_level.warn);
+		await log.value('qux', log_level.warn);
 
 		log.update({ threshold : log_level.notice });
 
-		await log.log('foo', log_level.notice);
+		await log.message('fox', log_level.notice);
+		await log.value('bax', log_level.notice);
 
 		assert.deepStrictEqual(msg, [
-			'1 warn foo',
-			'2 notice foo'
+			'1 warn baz',
+			'2 warn qux',
+			'3 notice fox',
+			'4 notice bax'
 		]);
 	});
 
@@ -211,24 +218,24 @@ describe('onceupon', () => {
 			},
 			parsers : {
 				[ loggable_type.any] : (loggable:any, context:LogContext) : LogTokens => [
-					createToken(token_type.message, context.type)
+					createToken(token_type.message_fragment, context.type)
 				]
 			},
 			decorate : tokens => tokens
 		});
 
-		await log.log(undefined);
-		await log.log(null);
-		await log.log(true);
-		await log.log(1);
+		await log.value(undefined);
+		await log.value(null);
+		await log.value(true);
+		await log.value(1);
 		// @ts-ignore
-		await log.log(1n);
-		await log.log('1');
-		await log.log(Symbol('1'));
-		await log.log(() => undefined);
-		await log.log([1, 2, 3]);
-		await log.log({ foo : 1 });
-		await log.log(new Error());
+		await log.value(1n);
+		await log.value('1');
+		await log.value(Symbol('1'));
+		await log.value(() => undefined);
+		await log.value([1, 2, 3]);
+		await log.value({ foo : 1 });
+		await log.value(new Error());
 
 		assert.deepStrictEqual(msg, [
 			loggable_type.undefined, loggable_type.null,
@@ -247,8 +254,8 @@ describe('onceupon', () => {
 			}
 		});
 
-		await log.log('foo', log_level.notice, 'bar');
-		await log.log('foo', log_level.notice, 'bar baz');
+		await log.message('foo', log_level.notice, 'bar');
+		await log.message('foo', log_level.notice, 'bar baz');
 
 		assert.deepStrictEqual(msg, [
 			'1 notice foo bar',
@@ -266,10 +273,10 @@ describe('onceupon', () => {
 			}
 		});
 
-		await log.log('foo', log_level.notice);
-		await log.log('foo', log_level.notice, 'bar');
-		await log.log('foo', log_level.notice, 'bar baz');
-		await log.log('foo', log_level.notice, 'baz quux');
+		await log.message('foo', log_level.notice);
+		await log.message('foo', log_level.notice, 'bar');
+		await log.message('foo', log_level.notice, 'bar baz');
+		await log.message('foo', log_level.notice, 'baz quux');
 
 		assert.deepStrictEqual(msg, [
 			'1 notice foo quux',
@@ -286,8 +293,8 @@ describe('onceupon', () => {
 			time : getIncrement()
 		});
 
-		msg.push(await mockConsole('log', () => log.log('foo')));
-		msg.push(await mockConsole('log', () => log.log('foo', log_level.notice, 'bar baz')));
+		msg.push(await mockConsole('log', () => log.message('foo')));
+		msg.push(await mockConsole('log', () => log.message('foo', log_level.notice, 'bar baz')));
 
 		assert.deepStrictEqual(msg, [
 			'1 notice  foo .:baz:quux',
