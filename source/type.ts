@@ -1,3 +1,6 @@
+import { Composition } from "./compose";
+
+
 export const enum loggable_type {
 	any = 'any',
 	other = 'unid',
@@ -11,7 +14,9 @@ export const enum loggable_type {
 	function = 'fn',
 	array = 'arr',
 	object = 'obj',
-	error = 'err'
+	error = 'err',
+	message = 'msg',
+	composition = 'cmp'
 }
 
 export type inferType = (loggable:any) => loggable_type;
@@ -42,5 +47,6 @@ export function getType(loggable:any) : loggable_type {
 	else if (loggable === null) return loggable_type.null;
 	else if (loggable instanceof Error) return loggable_type.error;
 	else if (Array.isArray(loggable)) return loggable_type.array;
+	else if (loggable instanceof Composition) return loggable_type.composition;
 	else return loggable_type.object;
 }
