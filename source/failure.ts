@@ -7,7 +7,7 @@ export const enum failure_type {
 
 
 export function createFailureToken(message:string) : LogToken {
-	return { type : token_type.logerr, content : `<${ message }>` };
+	return { type : token_type.self_err, content : `<${ message }>` };
 }
 
 

@@ -2,7 +2,16 @@ export const enum token_type {
 	time,
 	level,
 	tag,
-	message,
+	message_fragment,
+	scalar_bool,
+	scalar_int,
+	scalar_float,
+	scalar_nan,
+	scalar_inf,
+	scalar_string,
+	object,
+	property_name,
+	self_err
 }
 
 export interface LogToken {
