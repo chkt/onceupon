@@ -2,7 +2,7 @@ import { log_level } from "./level";
 import { extendTags } from "./tags";
 import { getType, inferType } from "./type";
 import { nowToISO, timingFunction } from "./time";
-import { LogContext } from "./context";
+import { createLogContext, LogContext, LoggableData } from "./context";
 import { LogTokens } from "./token";
 import { getParser, parsers, Parsers } from "./parse";
 import { decorateTimeLevelLog, decorateTokens } from "./decorate";
@@ -20,19 +20,29 @@ export interface LoggerConfig {
 }
 
 
-export type parseTransform = (loggable:any, context:LogContext) => LogTokens;
+export type parse = (loggable:any, context:LogContext) => LogTokens;
+export type parseAndHandle = (this:LoggerSettings, data:LoggableData) => Promise<void>;
 
 export interface LoggerSettings extends LoggerConfig {
 	readonly baseTags : string[];
-	readonly parse : parseTransform;
+	readonly parse : parse;
+	readonly parseAndHandle : parseAndHandle;
 }
 
 
-function parseTransform(infer:inferType, parserCollection:Parsers, loggable:any, context:LogContext) : LogTokens {
-	const type = infer(loggable);
-	const parser = getParser(parserCollection, type);
+function parse(this:LoggerSettings, loggable:any, context:LogContext) : LogTokens {
+	const type = this.infer(loggable);
+	const parser = getParser(this.parsers, type);
 
 	return parser(loggable, context);
+}
+
+async function parseAndHandle(this:LoggerSettings, data:LoggableData) : Promise<void> {
+	const parser = getParser(this.parsers, data.type);
+	const context = await createLogContext(this, data);
+	const tokens = this.decorate(parser(data.value, context), context);
+
+	return this.handle(tokens, context);
 }
 
 
@@ -54,6 +64,7 @@ export function getSettings(config:Partial<LoggerConfig>, base:LoggerConfig) : L
 	return {
 		...settings,
 		baseTags : extendTags([], settings.tags),
-		parse : parseTransform.bind(null, settings.infer, settings.parsers)
+		parse,
+		parseAndHandle
 	};
 }
