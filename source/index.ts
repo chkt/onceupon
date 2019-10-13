@@ -1,27 +1,37 @@
 import { isLevelWithinThreshold, log_level } from "./level";
-import { extendTags } from "./tags";
-import { createLogContext } from "./context";
-import { getParser } from "./parse";
-import { getSettings, getDefaultConfig, LoggerConfig, LoggerSettings } from "./config";
+import { loggable_type } from "./type";
+import { Composition } from "./compose";
+import { getDefaultConfig, getSettings, LoggerConfig, LoggerSettings } from "./config";
 
 
 export interface Logger {
-	log(loggable:any, level?:log_level, tags?:string) : Promise<void>;
+	message(message:string|Composition, level?:log_level, tags?:string) : Promise<void>;
+	value(value:any, level?:log_level, tags?:string) : Promise<void>;
 	update(settings:Partial<LoggerConfig>) : void;
 }
 
 
 function createLogger(settings:LoggerSettings) : Logger {
 	return {
-		async log(loggable, level:log_level = log_level.notice, tags:string = '') : Promise<void> {
+		async message(message, level = log_level.notice, tags = '') {
 			if (!isLevelWithinThreshold(level, settings.threshold)) return;
 
-			const type = settings.infer(loggable);
-			const parser = getParser(settings.parsers, type);
-			const context = await createLogContext(settings, level, type, extendTags(settings.baseTags, tags));
-			const tokens = settings.decorate(parser(loggable, context), context);
+			return settings.parseAndHandle({
+				type : typeof message === 'string' ? loggable_type.message : loggable_type.composition,
+				value : message,
+				level,
+				tags
+			});
+		},
+		async value(value, level = log_level.notice, tags = '') {
+			if (!isLevelWithinThreshold(level, settings.threshold)) return;
 
-			return settings.handle(tokens, context);
+			return settings.parseAndHandle({
+				type : settings.infer(value),
+				value,
+				level,
+				tags
+			});
 		},
 		update(config) {
 			settings = getSettings(config, settings);
