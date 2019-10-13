@@ -123,7 +123,23 @@ describe('onceupon', () => {
 		]);
 	});
 
-	it ('should log compositions', async () => {
+	it('should log arrays', async () => {
+		const msgs:string[] = [];
+		const log = logger({
+			time : getIncrement(),
+			handle : async tokens => {
+				msgs.push(tokensToString(tokens));
+			}
+		});
+
+		await log.value([ true, 1, 'foo' ]);
+
+		assert.deepStrictEqual(msgs, [
+			'1 notice  [\n\ttrue,\n\t1,\n\t\'foo\'\n]'
+		]);
+	});
+
+	it('should log compositions', async () => {
 		const msgs:string[] = [];
 		const log = logger({
 			time : getIncrement(),

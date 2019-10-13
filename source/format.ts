@@ -2,13 +2,34 @@ import { LogTokens, token_type } from "./token";
 import { isScopeToken } from "./parser/common";
 
 
+function isValueType(type:token_type) : boolean {
+	switch (type) {
+		case token_type.scalar_bool :
+		case token_type.scalar_int :
+		case token_type.scalar_float :
+		case token_type.scalar_inf :
+		case token_type.scalar_nan :
+		case token_type.scalar_string :
+		case token_type.object :
+		case token_type.object_array : return true;
+		default : return false;
+	}
+}
+
+
+function getSpacing(depth:number) {
+	return '\n'.padEnd(1 + depth, '\t');
+}
+
+
 function getDelim(prev:token_type|null, next:token_type, depth:number) : string {
-	if (prev === null) return depth === 0 ? '' : '\n'.padEnd(1 + depth, '\t');
+	if (prev === null) return depth === 0 ? '' : getSpacing(depth);
 	else if (prev === token_type.level) return ' ';
 	else if (next === token_type.tag) return prev === token_type.tag ? ':' : ' .:';
 	else if (prev === token_type.message_fragment || next === token_type.message_fragment) return '';
 	else if (prev === token_type.property_name) return ' : ';
-	else if (next === token_type.property_name) return ',\n'.padEnd(2 + depth, '\t');
+	else if (next === token_type.property_name) return `,${ depth === 0 ? ' ' : getSpacing(depth) }`;
+	else if (isValueType(prev) && isValueType(next)) return `,${ depth === 0 ? ' ' : getSpacing(depth) }`;
 
 	return ' ';
 }
@@ -32,7 +53,8 @@ export function tokensToString(tokens:LogTokens, depth:number = 0) : string {
 		if (nextType === token_type.level) message += token.content.padEnd(7, ' ');
 		else if (nextType === token_type.scalar_string) message += delimitString(token.content);
 		else if (isScopeToken(token)) {
-			if (nextType === token_type.object) message += `{${ tokensToString(token.children, depth + 1) }${ '\n'.padEnd(1 + depth, '\t') }}`;
+			if (nextType === token_type.object) message += `{${ tokensToString(token.children, depth + 1) }${ getSpacing(depth) }}`;
+			else if (nextType === token_type.object_array) message += `[${ tokensToString(token.children, depth + 1) }${ getSpacing(depth) }]`;
 		}
 		else message += token.content;
 

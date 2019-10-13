@@ -10,12 +10,13 @@ export const enum token_type {
 	scalar_inf,
 	scalar_string,
 	object,
+	object_array,
 	property_name,
 	self_err
 }
 
 export interface LogToken {
-	readonly type : number;
+	readonly type : token_type;
 	readonly content : string;
 }
 

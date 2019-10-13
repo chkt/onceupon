@@ -5,8 +5,8 @@ import { LoggerSettings, parse } from "./config";
 
 
 export interface LoggableData {
-	readonly value : any;
 	readonly type : loggable_type;
+	readonly value : any;
 	readonly level : log_level;
 	readonly tags : string;
 }

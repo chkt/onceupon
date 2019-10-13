@@ -11,5 +11,6 @@ export function isScopeToken(token:LogToken) : token is ScopeToken {
 }
 
 export function createScopeToken(type:token_type, children:LogTokens) : ScopeToken {
+	// tslint:disable-next-line:object-literal-sort-keys
 	return { type, content : '', children };
 }

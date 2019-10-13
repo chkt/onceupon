@@ -4,7 +4,7 @@ import { LogContext } from "./context";
 import { LogTokens } from "./token";
 import { parseFail } from "./failure";
 import { parseBool, parseNumber, parseString } from "./parser/scalars";
-import { parseObject } from "./parser/object";
+import { parseArray, parseObject } from "./parser/object";
 import { parseMessage, parseComposition } from "./parser/message";
 
 
@@ -35,6 +35,7 @@ export const parsers:Parsers = {
 	[ loggable_type.number ] : parseNumber,
 	[ loggable_type.string ] : parseString,
 	[ loggable_type.object ] : parseObject,
+	[ loggable_type.array ] : parseArray,
 	[ loggable_type.message ] : parseMessage,
 	[ loggable_type.composition ] : parseComposition
 };

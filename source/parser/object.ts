@@ -15,3 +15,11 @@ export function parseObject(obj:object, context:LogContext) : LogTokens {
 
 	return [ createScopeToken(token_type.object, items) ];
 }
+
+export function parseArray(arr:any[], context:LogContext) : LogTokens {
+	const items = [];
+
+	for (const item of arr) items.push(...context.parse(item, context));
+
+	return [ createScopeToken(token_type.object_array, items)];
+}
