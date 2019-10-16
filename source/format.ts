@@ -29,6 +29,8 @@ function getDelim(prev:token_type|null, next:token_type, depth:number) : string 
 	else if (prev === token_type.message_fragment || next === token_type.message_fragment) return '';
 	else if (prev === token_type.property_name) return ' : ';
 	else if (next === token_type.property_name) return `,${ depth === 0 ? ' ' : getSpacing(depth) }`;
+	else if (next === token_type.error_file) return ' @';
+	else if (next === token_type.error_col) return `${ prev !== token_type.error_line ? ' ' : '' }:`;
 	else if (isValueType(prev) && isValueType(next)) return `,${ depth === 0 ? ' ' : getSpacing(depth) }`;
 
 	return ' ';
@@ -51,7 +53,10 @@ export function tokensToString(tokens:LogTokens, depth:number = 0) : string {
 		message += getDelim(prevType, nextType, depth);
 
 		if (nextType === token_type.level) message += token.content.padEnd(7, ' ');
-		else if (nextType === token_type.scalar_string) message += delimitString(token.content);
+		else if (
+			nextType === token_type.scalar_string ||
+			nextType === token_type.error_message
+		) message += delimitString(token.content);
 		else if (isScopeToken(token)) {
 			if (nextType === token_type.object) message += `{${ tokensToString(token.children, depth + 1) }${ getSpacing(depth) }}`;
 			else if (nextType === token_type.object_array) message += `[${ tokensToString(token.children, depth + 1) }${ getSpacing(depth) }]`;
