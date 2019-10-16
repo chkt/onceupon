@@ -6,6 +6,7 @@ import { parseFail } from "./failure";
 import { parseBool, parseNumber, parseString } from "./parser/scalars";
 import { parseArray, parseObject } from "./parser/object";
 import { parseMessage, parseComposition } from "./parser/message";
+import { parseError } from "./parser/error";
 
 
 export interface TypeMap {
@@ -36,6 +37,7 @@ export const parsers:Parsers = {
 	[ loggable_type.string ] : parseString,
 	[ loggable_type.object ] : parseObject,
 	[ loggable_type.array ] : parseArray,
+	[ loggable_type.error ] : parseError,
 	[ loggable_type.message ] : parseMessage,
 	[ loggable_type.composition ] : parseComposition
 };

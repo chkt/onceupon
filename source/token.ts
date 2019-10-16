@@ -12,6 +12,11 @@ export const enum token_type {
 	object,
 	object_array,
 	property_name,
+	error_name,
+	error_message,
+	error_file,
+	error_line,
+	error_col,
 	self_err
 }
 
