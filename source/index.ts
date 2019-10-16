@@ -7,6 +7,7 @@ import { getDefaultConfig, getSettings, LoggerConfig, LoggerSettings } from "./c
 export interface Logger {
 	message(message:string|Composition, level?:log_level, tags?:string) : Promise<void>;
 	value(value:any, level?:log_level, tags?:string) : Promise<void>;
+	failure(reason:any, level?:log_level, tags?:string) : Promise<void>;
 	update(settings:Partial<LoggerConfig>) : void;
 }
 
@@ -29,6 +30,16 @@ function createLogger(settings:LoggerSettings) : Logger {
 			return settings.parseAndHandle({
 				type : settings.infer(value),
 				value,
+				level,
+				tags
+			});
+		},
+		async failure(reason, level = log_level.error, tags = '') {
+			if (!isLevelWithinThreshold(level, settings.threshold)) return;
+
+			return settings.parseAndHandle({
+				type : typeof reason === 'string' ? loggable_type.message : settings.infer(reason),
+				value : reason,
 				level,
 				tags
 			});
