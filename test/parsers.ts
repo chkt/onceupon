@@ -123,6 +123,132 @@ describe('onceupon', () => {
 		]);
 	});
 
+	it('should log v8 errors', async () => {
+		const msgs:string[] = [];
+		const log = logger({
+			time: getIncrement(),
+			handle: async tokens => {
+				msgs.push(tokensToString(tokens));
+			}
+		});
+
+		class V8Error extends Error {
+			public stack : string;
+
+			constructor(message:string, stack:string) {
+				super(message);
+
+				this.stack = stack;
+			}
+		}
+
+		await log.value(new V8Error('foo', 'V8Error: foo\n    at fn (/path/to/file:1:2)'));
+		await log.value(new V8Error('bar', 'V8Error: bar\n    at SomeClass.method [as methodName] (/path/to/file:10:20)'));
+		await log.value(new V8Error('baz', 'V8Error: baz\n    at new SomeClass (/path/to/file:12:34)'));
+		await log.value(new V8Error('qux', 'V8Error: qux\n    at nativeOp (native)'));
+		await log.value(new V8Error('fox', 'V8Error: fox\n    at <anonymous> (unknown location)'));
+		await log.value(new V8Error('bax', 'V8Error: bax\n    at SomeClass.method (eval at SomeClass.other (eval at <anonymous> (/path/to/file:42:23)))'));
+
+		assert.deepStrictEqual(msgs, [
+			'1 notice  Error:V8Error \'foo\' @/path/to/file 1:2',
+			'2 notice  Error:V8Error \'bar\' @/path/to/file 10:20',
+			'3 notice  Error:V8Error \'baz\' @/path/to/file 12:34',
+			'4 notice  Error:V8Error \'qux\' @native ?:?',
+			'5 notice  Error:V8Error \'fox\' @unknown location ?:?',
+			'6 notice  Error:V8Error \'bax\' @/path/to/file 42:23'
+		]);
+	});
+
+	it('should log errors with file information', async () => {
+		const msgs:string[] = [];
+		const log = logger({
+			time : getIncrement(),
+			handle : async tokens => {
+				msgs.push(tokensToString(tokens));
+			}
+		});
+
+		// tslint:disable-next-line:max-classes-per-file
+		class FileInfoError extends Error {
+			public fileName : string;
+			public lineNumber : string;
+			public columnNumber : string;
+
+			constructor(message:string, file:string, line:string, col:string) {
+				super(message);
+
+				this.name = 'SomeError';
+				this.fileName = file;
+				this.lineNumber = line;
+				this.columnNumber = col;
+			}
+		}
+
+		await log.value(new FileInfoError('foo', 'path/to/file', '1', '13'));
+
+		assert.deepStrictEqual(msgs, [
+			'1 notice  SomeError:FileInfoError \'foo\' @path/to/file 1:13'
+		]);
+	});
+
+	it('should log errors with firefox-like stack traces', async () => {
+		const msgs:string[] = [];
+		const log = logger({
+			time : getIncrement(),
+			handle : async tokens => {
+				msgs.push(tokensToString(tokens));
+			}
+		});
+
+		// tslint:disable-next-line:max-classes-per-file
+		class FFStackError extends Error {
+			public name : string;
+			public stack : string;
+
+			constructor(message:string, stack:string) {
+				super(message);
+
+				this.name = 'FFStackError';
+				this.stack = stack;
+			}
+		}
+
+		await log.value(new FFStackError('bang', 'foo@path/to/file:23:42\n@path/to/other:1:13'));
+		await log.value(new FFStackError('bang', '@path/to/file line 23 > eval:1:1\n@path/to/file:23:42'));
+
+		assert.deepStrictEqual(msgs, [
+			'1 notice  FFStackError \'bang\' @path/to/file 23:42',
+			'2 notice  FFStackError \'bang\' @path/to/file line 23 > eval 1:1'
+		]);
+	});
+
+	it ('should report unsolvable traces', async () => {
+		const msgs:string[] = [];
+		const log = logger({
+			time : getIncrement(),
+			handle : async tokens => {
+				msgs.push(tokensToString(tokens));
+			}
+		});
+
+		// tslint:disable-next-line:max-classes-per-file
+		class OddTraceError extends Error {
+			public stack : string;
+
+			constructor(message:string, stack:string) {
+				super(message);
+
+				this.stack = stack;
+			}
+		}
+
+		await log.value(new OddTraceError('foo', '1:23 /path/to/file foo'));
+
+		assert.deepStrictEqual(msgs, [
+			'1 notice  Error:OddTraceError \'foo\' <ODDTRACE 1:23 /path/to/file foo>'
+		]);
+	});
+
 	it('should log arrays', async () => {
 		const msgs:string[] = [];
 		const log = logger({
