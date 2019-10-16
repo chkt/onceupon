@@ -4,6 +4,7 @@ import { describe, it } from 'mocha';
 import { Writable } from 'stream';
 import { log_level } from "../source/level";
 import { loggable_type } from "../source/type";
+import { compose } from "../source/compose";
 import { LogContext } from "../source/context";
 import { createToken, LogTokens, token_type } from "../source/token";
 import logger from '../source';
@@ -299,6 +300,21 @@ describe('onceupon', () => {
 		assert.deepStrictEqual(msg, [
 			'1 notice  foo .:baz:quux',
 			'2 notice  foo .:baz:quux:bar'
+		]);
+	});
+
+	it ('should treat strings as messages when using the failure reporter', async () => {
+		const msg:string[] = [];
+		const log = logger({
+			time : getIncrement()
+		});
+
+		msg.push(await mockConsole('error', () => log.failure('because I say so')));
+		msg.push(await mockConsole('error', () => log.failure(compose`this is a failure, ${ 'foo' }`)));
+
+		assert.deepStrictEqual(msg, [
+			'1 error   because I say so',
+			'2 error   this is a failure, \'foo\''
 		]);
 	});
 });
