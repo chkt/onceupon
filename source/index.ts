@@ -8,7 +8,8 @@ export interface Logger {
 	message(message:string|Composition, level?:log_level, tags?:string) : Promise<void>;
 	value(value:any, level?:log_level, tags?:string) : Promise<void>;
 	failure(reason:any, level?:log_level, tags?:string) : Promise<void>;
-	update(settings:Partial<LoggerConfig>) : void;
+	threshold(threshold:log_level) : Logger;
+	settings(settings:Partial<LoggerConfig>) : Logger;
 }
 
 
@@ -44,8 +45,11 @@ function createLogger(settings:LoggerSettings) : Logger {
 				tags
 			});
 		},
-		update(config) {
-			settings = getSettings(config, settings);
+		threshold(threshold) {
+			return createLogger(getSettings({ threshold }, settings));
+		},
+		settings(config) {
+			return createLogger(getSettings(config, settings));
 		}
 	};
 }

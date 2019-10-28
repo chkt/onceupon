@@ -7,8 +7,8 @@ import { loggable_type } from "../source/type";
 import { compose } from "../source/compose";
 import { LogContext } from "../source/context";
 import { createToken, LogTokens, token_type } from "../source/token";
-import logger from '../source';
 import { createOutErrHandler } from "../source/handler";
+import logger from '../source';
 
 
 class MockStream extends Writable {
@@ -66,8 +66,10 @@ describe('onceupon', () => {
 		assert(typeof log.message === 'function');
 		assert('value' in log);
 		assert(typeof log.value === 'function');
-		assert('update' in log);
-		assert(typeof log.update === 'function');
+		assert('threshold' in log);
+		assert(typeof log.threshold === 'function');
+		assert('settings' in log);
+		assert(typeof log.settings === 'function');
 	});
 
 	it('should log a string message to console', async () => {
@@ -198,16 +200,25 @@ describe('onceupon', () => {
 		await log.message('baz', log_level.warn);
 		await log.value('qux', log_level.warn);
 
-		log.update({ threshold : log_level.notice });
+		const log2 = log.threshold(log_level.notice);
 
-		await log.message('fox', log_level.notice);
-		await log.value('bax', log_level.notice);
+		await log2.message('fox', log_level.notice);
+		await log2.value('bax', log_level.notice);
+		await log2.message('arg', log_level.info);
+		await log2.value('barg', log_level.info);
+
+		const log3 = log2.settings({ threshold : log_level.info });
+
+		await log3.message('arr', log_level.info);
+		await log3.value('err', log_level.info);
 
 		assert.deepStrictEqual(msg, [
 			'1 warn baz',
 			'2 warn qux',
 			'3 notice fox',
-			'4 notice bax'
+			'4 notice bax',
+			'5 info arr',
+			'6 info err'
 		]);
 	});
 
