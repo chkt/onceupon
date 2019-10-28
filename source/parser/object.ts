@@ -3,6 +3,10 @@ import { LogContext } from "../context";
 import { createScopeToken } from "./common";
 
 
+export function parseNull() : LogTokens {
+	return [ createToken(token_type.object_null, 'null') ];
+}
+
 export function parseObject(obj:object, context:LogContext) : LogTokens {
 	const items = [];
 

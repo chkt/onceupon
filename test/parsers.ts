@@ -14,6 +14,25 @@ async function* getIncrement() {
 
 
 describe('onceupon', () => {
+	it ('should log null and undefined', async () => {
+		const msgs:string[] = [];
+		const log = logger({
+			tags : 'foo bar',
+			time : getIncrement(),
+			handle : async tokens => {
+				msgs.push(tokensToString(tokens));
+			}
+		});
+
+		await log.value(undefined);
+		await log.value(null);
+
+		assert.deepStrictEqual(msgs, [
+			'1 notice  undefined .:foo:bar',
+			'2 notice  null .:foo:bar'
+		]);
+	});
+
 	it ('should log booleans', async () => {
 		const msgs:string[] = [];
 		const log = logger({

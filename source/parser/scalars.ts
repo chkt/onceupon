@@ -1,6 +1,10 @@
 import { createToken, LogTokens, token_type } from "../token";
 
 
+export function parseUndefined() : LogTokens {
+	return [ createToken(token_type.scalar_undefined, 'undefined') ];
+}
+
 export function parseBool(b:boolean) : LogTokens {
 	return [ createToken(token_type.scalar_bool, b ? 'true' : 'false') ];
 }

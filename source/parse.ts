@@ -3,8 +3,8 @@ import { Composition } from "./compose";
 import { LogContext } from "./context";
 import { LogTokens } from "./token";
 import { parseFail } from "./failure";
-import { parseBool, parseNumber, parseString } from "./parser/scalars";
-import { parseArray, parseObject } from "./parser/object";
+import { parseBool, parseNumber, parseString, parseUndefined } from "./parser/scalars";
+import { parseArray, parseNull, parseObject } from "./parser/object";
 import { parseMessage, parseComposition } from "./parser/message";
 import { parseError } from "./parser/error";
 
@@ -32,6 +32,8 @@ export type Parsers = { [P in loggable_type]? : parse<P> };
 
 
 export const parsers:Parsers = {
+	[ loggable_type.undefined ] : parseUndefined,
+	[ loggable_type.null ] : parseNull,
 	[ loggable_type.boolean ] : parseBool,
 	[ loggable_type.number ] : parseNumber,
 	[ loggable_type.string ] : parseString,
