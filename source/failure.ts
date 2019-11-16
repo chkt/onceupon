@@ -7,15 +7,20 @@ export const enum failure_type {
 }
 
 
-export function createFailureToken(message:string) : LogToken {
-	return { type : token_type.self_err, content : `<${ message }>` };
+function createTokenContent(type:failure_type, message:string) : string {
+	return `<${ type }|${ message }>`;
+}
+
+
+export function createFailureToken(content:string) : LogToken {
+	return { type : token_type.self_err, content };
 }
 
 
 export function parseFail(type:string) : LogTokens {
-	return [ createFailureToken(`${ failure_type.no_parser } ${ type }`)];
+	return [ createFailureToken(createTokenContent(failure_type.no_parser, type)) ];
 }
 
 export function stackFail(line:string) : LogTokens {
-	return [ createFailureToken(`${ failure_type.odd_trace} ${ line }`) ];
+	return [ createFailureToken(createTokenContent(failure_type.odd_trace, line)) ];
 }
