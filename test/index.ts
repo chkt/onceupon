@@ -123,7 +123,7 @@ describe('onceupon', () => {
 
 		assert.deepStrictEqual(msgs, [
 			'1 notice foo',
-			'2 notice <NOPARSE fnum>'
+			'2 notice <NOPARSE|fnum>'
 		]);
 	});
 

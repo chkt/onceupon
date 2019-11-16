@@ -234,10 +234,12 @@ describe('onceupon', () => {
 
 		await log.value(new FFStackError('bang', 'foo@path/to/file:23:42\n@path/to/other:1:13'));
 		await log.value(new FFStackError('bang', '@path/to/file line 23 > eval:1:1\n@path/to/file:23:42'));
+		await log.value(new FFStackError('bang', '    foo@path/to/file:23:42    '));
 
 		assert.deepStrictEqual(msgs, [
 			'1 notice  FFStackError \'bang\' @path/to/file 23:42',
-			'2 notice  FFStackError \'bang\' @path/to/file line 23 > eval 1:1'
+			'2 notice  FFStackError \'bang\' @path/to/file line 23 > eval 1:1',
+			'3 notice  FFStackError \'bang\' @path/to/file 23:42'
 		]);
 	});
 
@@ -261,10 +263,10 @@ describe('onceupon', () => {
 			}
 		}
 
-		await log.value(new OddTraceError('foo', '1:23 /path/to/file foo'));
+		await log.value(new OddTraceError('foo', '  1:23 /path/to/file foo  '));
 
 		assert.deepStrictEqual(msgs, [
-			'1 notice  Error:OddTraceError \'foo\' <ODDTRACE 1:23 /path/to/file foo>'
+			'1 notice  Error:OddTraceError \'foo\' <ODDTRACE|  1:23 /path/to/file foo  >'
 		]);
 	});
 
