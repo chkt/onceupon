@@ -2,7 +2,7 @@ import { createToken, LogTokens, token_type } from "../token";
 import { stackFail } from "../failure";
 
 
-const stackParserFF = /^([^@]*)@([^:]+):(\d+):(\d+)$/;
+const stackParserFF = /^\s*([^@]*)@([^:]+):(\d+):(\d+)\s*$/;
 
 const enum ff_match_location {
 	message = 0,
@@ -45,9 +45,15 @@ function isStackInfoError(err:Error) : err is StackInfoError {
 	return 'stack' in (err as StackInfoError);
 }
 
+function isErrorLine(err:StackInfoError, line:string) : boolean {
+	const expr = new RegExp(`^(?:${ err.name }|${ err.constructor.name })`);
+
+	return expr.test(line);
+}
+
 
 function createTraceError(message:string, trace:string) : Error {
-	return new Error(`${ message }:${ trace.trim() }`);
+	return new Error(`${ message }:${ trace }`);
 }
 
 function getErrorTrace(err:Error) : string {
@@ -130,7 +136,9 @@ function parseErrorStack(err:StackInfoError, limit:number = Number.MAX_SAFE_INTE
 
 	if (lines.length === 0) return [];
 
-	if (lines.length > 1 && stackParserV8.test(lines[1])) return parseErrorStackV8(lines.slice(1), limit);
+	if (isErrorLine(err, lines[0])) lines.splice(0, 1);
+
+	if (stackParserV8.test(lines[0])) return parseErrorStackV8(lines, limit);
 	else if (stackParserFF.test(lines[0])) return parseErrorStackFF(lines, limit);
 	else throw createTraceError('no parser', lines[0]);
 }
