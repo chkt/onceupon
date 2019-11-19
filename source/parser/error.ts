@@ -2,7 +2,7 @@ import { createToken, LogTokens, token_type } from "../token";
 import { stackFail } from "../failure";
 
 
-const stackParserFF = /^\s*([^@]*)@([^:]+):(\d+):(\d+)\s*$/;
+const stackParserFF = /^\s*([^@]*)@(.+):(\d+):(\d+)\s*$/;
 
 const enum ff_match_location {
 	message = 0,

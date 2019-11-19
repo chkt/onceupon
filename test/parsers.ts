@@ -235,11 +235,13 @@ describe('onceupon', () => {
 		await log.value(new FFStackError('bang', 'foo@path/to/file:23:42\n@path/to/other:1:13'));
 		await log.value(new FFStackError('bang', '@path/to/file line 23 > eval:1:1\n@path/to/file:23:42'));
 		await log.value(new FFStackError('bang', '    foo@path/to/file:23:42    '));
+		await log.value(new FFStackError('bang', 'value@http://domain.tld/path/to/file:23:42'));
 
 		assert.deepStrictEqual(msgs, [
 			'1 notice  FFStackError \'bang\' @path/to/file 23:42',
 			'2 notice  FFStackError \'bang\' @path/to/file line 23 > eval 1:1',
-			'3 notice  FFStackError \'bang\' @path/to/file 23:42'
+			'3 notice  FFStackError \'bang\' @path/to/file 23:42',
+			'4 notice  FFStackError \'bang\' @http://domain.tld/path/to/file 23:42'
 		]);
 	});
 
