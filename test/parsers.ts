@@ -245,6 +245,43 @@ describe('onceupon', () => {
 		]);
 	});
 
+	it ('should log errors with safari-like stack traces', async () => {
+		const msgs:string[] = [];
+		const log = logger({
+			time : getIncrement(),
+			handle : async tokens => {
+				msgs.push(tokensToString(tokens));
+			}
+		});
+
+		// tslint:disable-next-line:max-classes-per-file
+		class JsCoreStackError extends Error {
+			public name : string;
+			public stack : string;
+
+			constructor(message:string, stack:string) {
+				super(message);
+
+				this.name = 'JsCoreStackError';
+				this.stack = stack;
+			}
+		}
+
+		await log.value(new JsCoreStackError('bang', 'foo@path/to/file:23:42\n@path/to/other:1:13'));
+		await log.value(new JsCoreStackError('bang', 'foo@path/to/file:23:42\nbar@[native code]'));
+		await log.value(new JsCoreStackError('bang', '    foo@path/to/file:23:42    '));
+		await log.value(new JsCoreStackError('bang', 'foo@http://domain.tld/path/to/file:23:42'));
+		await log.value(new JsCoreStackError('bang', 'foo@[native code]'));
+
+		assert.deepStrictEqual(msgs, [
+			"1 notice  JsCoreStackError 'bang' @path/to/file 23:42",
+			"2 notice  JsCoreStackError 'bang' @path/to/file 23:42",
+			"3 notice  JsCoreStackError 'bang' @path/to/file 23:42",
+			"4 notice  JsCoreStackError 'bang' @http://domain.tld/path/to/file 23:42",
+			"5 notice  JsCoreStackError 'bang' @native ?:?"
+		]);
+	});
+
 	it ('should report unsolvable traces', async () => {
 		const msgs:string[] = [];
 		const log = logger({
