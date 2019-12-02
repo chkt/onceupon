@@ -25,16 +25,18 @@ const enum jscore_match_location {
 }
 
 
-const stackParserV8 = /^\s*at (?:[^. ]+\.|new )?([^ ]+) (?:\[as [^\]]+] )?\((?:(native|unknown location)|eval (.*)|([^:]+):(\d+):(\d+))\)\s*$/;
+const stackParserV8 = /^\s*(?:([A-Za-z_$][A-Za-z0-9_$]*)(?:: (.+))?|at (?:[^. ]+\.|new )?([^ ]+) (?:\[as [^\]]+] )?\((?:(native|unknown location)|eval (.*)|([^:]+):(\d+):(\d+))\))\s*$/;
 
 const enum v8_match_location {
-	message = 0,
-	name = 1,
-	bin = 2,
-	eval = 3,
-	file = 4,
-	line = 5,
-	col = 6
+	frame = 0,
+	error = 1,
+	message = 2,
+	name = 3,
+	bin = 4,
+	eval = 5,
+	file = 6,
+	line = 7,
+	col = 8
 }
 
 
@@ -59,12 +61,6 @@ function isStackInfoError(err:Error) : err is StackInfoError {
 	return 'stack' in (err as StackInfoError);
 }
 
-function isErrorLine(err:StackInfoError, line:string) : boolean {
-	const expr = new RegExp(`^(?:${ err.name }|${ err.constructor.name })`);
-
-	return expr.test(line);
-}
-
 
 function createTraceError(message:string, trace:string) : Error {
 	return new Error(`${ message }:${ trace }`);
@@ -77,12 +73,27 @@ function getErrorTrace(err:Error) : string {
 }
 
 
-interface StackInfo {
+interface StackCommon {
 	readonly name : string;
+}
+
+interface ErrorInfo extends StackCommon {
+	readonly message? : string;
+}
+
+interface StackFrame extends StackCommon {
 	readonly file : string;
 	readonly line : string;
 	readonly col : string;
 }
+
+type StackInfo = StackFrame|ErrorInfo;
+
+
+function isErrorInfo(frame:StackCommon) : frame is ErrorInfo {
+	return 'message' in frame || !('file' in frame);
+}
+
 
 const enum parse_mode {
 	unknown,
@@ -126,10 +137,16 @@ function createStackInfoV8(match:RegExpMatchArray) : StackInfo {
 			name
 		};
 	}
-	else throw createTraceError('v8 weird line', match[v8_match_location.message]);
+	else if (match[v8_match_location.error] !== undefined) {
+		return {
+			name : match[v8_match_location.error],
+			...match[v8_match_location.message] !== undefined ? { message : match[v8_match_location.message ] } : {}
+		};
+	}
+	else throw createTraceError('v8 weird line', match[v8_match_location.frame]);
 }
 
-function createStackInfoJsCore(match:RegExpMatchArray) : StackInfo {
+function createStackInfoJsCore(match:RegExpMatchArray) : StackFrame {
 	const name = match[jscore_match_location.name];
 
 	if (match[jscore_match_location.file] !== undefined) {
@@ -155,7 +172,7 @@ function parseLineV8(line:string) : StackInfo {
 	return createStackInfoV8(match);
 }
 
-function parseLineSpiderMonkey(line:string) : StackInfo {
+function parseLineSpiderMonkey(line:string) : StackFrame {
 	const match = line.match(stackParserSpiderMonkey);
 
 	if (match === null) throw createTraceError('not a SpiderMonkey frame', line);
@@ -168,7 +185,7 @@ function parseLineSpiderMonkey(line:string) : StackInfo {
 	};
 }
 
-function parseLineJsCore(line:string) : StackInfo {
+function parseLineJsCore(line:string) : StackFrame {
 	const match = line.match(stackParserJsCore);
 
 	if (match === null) throw createTraceError('not a JsCore frame', line);
@@ -176,7 +193,7 @@ function parseLineJsCore(line:string) : StackInfo {
 	return createStackInfoJsCore(match);
 }
 
-function parseLineSpiderMonkeyOrJSCore(line:string) : [ parse_mode, StackInfo] {
+function parseLineSpiderMonkeyOrJSCore(line:string) : [ parse_mode, StackFrame] {
 	if (isSpiderMonkeyFrame(line)) return [ parse_mode.spiderMonkey, parseLineSpiderMonkey(line) ];
 	else if (isJSCoreFrame(line)) return [ parse_mode.jscore, parseLineJsCore(line) ];
 	else throw createTraceError('neither SpiderMonkey nor JsCore frame', line);
@@ -190,16 +207,9 @@ function parseLineUnknown(line:string) : [ parse_mode, StackInfo ] {
 }
 
 
-function parseErrorStack(err:StackInfoError, limit:number = Number.MAX_SAFE_INTEGER) : StackInfo[] {
+function parseErrorStack(err:StackInfoError, limit:number = Number.MAX_SAFE_INTEGER) : StackFrame[] {
 	const lines = err.stack.split('\n');
-
-	for (let i = 0, l = lines.length; i < l; i ++) {
-		if (isErrorLine(err, lines[0])) lines.splice(0, 1);
-	}
-
-	if (lines.length === 0) return [];
-
-	const res:StackInfo[] = [];
+	const res:StackFrame[] = [];
 	let mode = parse_mode.unknown;
 
 	for (let i = 0, l = Math.min(lines.length, limit); i < l; i += 1) {
@@ -212,7 +222,8 @@ function parseErrorStack(err:StackInfoError, limit:number = Number.MAX_SAFE_INTE
 		else if (mode === parse_mode.spiderMonkey) frame = parseLineSpiderMonkey(line);
 		else frame = parseLineJsCore(line);
 
-		res.push(frame);
+		if (isErrorInfo(frame)) l = Math.min(lines.length, l + 1);
+		else res.push(frame);
 	}
 
 	return res;
@@ -235,7 +246,7 @@ export function parseError(err:Error) : LogTokens {
 		);
 	}
 	else if (isStackInfoError(err)) {
-		let stack:StackInfo[];
+		let stack:StackFrame[];
 
 		try {
 			stack = parseErrorStack(err, 1);
