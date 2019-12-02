@@ -167,6 +167,7 @@ describe('onceupon', () => {
 		await log.value(new V8Error('qux', 'V8Error: qux\n    at nativeOp (native)'));
 		await log.value(new V8Error('fox', 'V8Error: fox\n    at <anonymous> (unknown location)'));
 		await log.value(new V8Error('bax', 'V8Error: bax\n    at SomeClass.method (eval at SomeClass.other (eval at <anonymous> (/path/to/file:42:23)))'));
+		await log.value(new V8Error('quz', '$ome_error: bang\n    at fn (/path/to/file:42:23)'));
 
 		assert.deepStrictEqual(msgs, [
 			'1 notice  Error:V8Error \'foo\' @/path/to/file 1:2',
@@ -174,7 +175,8 @@ describe('onceupon', () => {
 			'3 notice  Error:V8Error \'baz\' @/path/to/file 12:34',
 			'4 notice  Error:V8Error \'qux\' @native ?:?',
 			'5 notice  Error:V8Error \'fox\' @unknown location ?:?',
-			'6 notice  Error:V8Error \'bax\' @/path/to/file 42:23'
+			'6 notice  Error:V8Error \'bax\' @/path/to/file 42:23',
+			'7 notice  Error:V8Error \'quz\' @/path/to/file 42:23'
 		]);
 	});
 
