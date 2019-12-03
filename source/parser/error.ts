@@ -25,7 +25,7 @@ const enum jscore_match_location {
 }
 
 
-const stackParserV8 = /^\s*(?:([A-Za-z_$][A-Za-z0-9_$]*)(?:: (.+))?|at (?:[^. ]+\.|new )?([^ ]+) (?:\[as [^\]]+] )?\((?:(native|unknown location)|eval (.*)|([^:]+):(\d+):(\d+))\))\s*$/;
+const stackParserV8 = /^\s*(?:([A-Za-z_$][A-Za-z0-9_$]*)(?:: (.+))?|at (?:[^. ]+\.|new )?([^ ]+) (?:\[as [^\]]+] )?\((?:(native|unknown location)|eval (.*)|(.+):(\d+):(\d+))\))\s*$/;
 
 const enum v8_match_location {
 	frame = 0,
