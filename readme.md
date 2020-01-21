@@ -1,3 +1,11 @@
+[![Tests](https://github.com/chkt/onceupon/workflows/tests/badge.svg)](https://github.com/chkt/onceupon/actions)
+[![Version](https://img.shields.io/npm/v/@chkt/onceupon)](https://www.npmjs.com/package/@chkt/onceupon)
+![Node](https://img.shields.io/node/v/@chkt/onceupon)
+![Dependencies](https://img.shields.io/librariesio/release/npm/@chkt/onceupon)
+![Licence](https://img.shields.io/npm/l/@chkt/onceupon)
+![Language](https://img.shields.io/github/languages/top/chkt/onceupon)
+![Size](https://img.shields.io/bundlephobia/min/@chkt/onceupon)
+
 # onceupon
 ## Logging without compromises
 
