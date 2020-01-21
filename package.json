@@ -16,6 +16,10 @@
 		"url": "https://github.com/chkt/onceupon"
 	},
 
+	"engines": {
+		"node" : ">=10.0"
+	},
+
 	"files": [ "dist" ],
 	"main": "./dist/index.js",
 
