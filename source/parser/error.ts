@@ -151,6 +151,7 @@ function createStackInfoJsCore(match:RegExpMatchArray) : StackFrame {
 
 	if (match[jscore_match_location.file] !== undefined) {
 		return {
+			// tslint:disable-next-line:object-literal-sort-keys
 			name,
 			file : match[jscore_match_location.file],
 			line : match[jscore_match_location.line],
@@ -158,7 +159,8 @@ function createStackInfoJsCore(match:RegExpMatchArray) : StackFrame {
 		};
 	}
 	else if (match[jscore_match_location.bin] !== undefined) {
-		return {name, file: 'native', line: '?', col: '?'};
+		// tslint:disable-next-line:object-literal-sort-keys
+		return { name, file: 'native', line: '?', col: '?' };
 	}
 	else throw createTraceError('odd JsCore frame', match[jscore_match_location.message]);
 }
@@ -178,6 +180,7 @@ function parseLineSpiderMonkey(line:string) : StackFrame {
 	if (match === null) throw createTraceError('not a SpiderMonkey frame', line);
 
 	return {
+		// tslint:disable-next-line:object-literal-sort-keys
 		name : match[spidermonkey_match_location.name],
 		file : match[spidermonkey_match_location.file],
 		line : match[spidermonkey_match_location.line],
