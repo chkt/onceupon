@@ -24,7 +24,7 @@
 	"main": "./dist/index.js",
 
 	"scripts" : {
-		"prepare": "npm run test && npm run lint && npm run build",
+		"prepublishOnly": "yarn run test && yarn run lint && yarn outdated && yarn run build",
 
 		"lint" : "./node_modules/tslint/bin/tslint -p tsconfig.json",
 		"test" : "./node_modules/mocha/bin/mocha -r ts-node/register test/**/*.ts",
@@ -32,14 +32,16 @@
 	},
 
 	"devDependencies": {
-		"@types/mocha": "^5.2",
-		"@types/node": "^13.1",
+		"@types/mocha": "^7.0",
+		"@types/node": "^13.7",
 		"mocha": "^7.0",
 		"nyc": "^15.0",
 		"ts-node": "^8.6",
-		"tslint": "^5.20.1",
-		"typescript": "^3.0"
+		"tslint": "^6.1",
+		"typescript": "^3.7"
 	},
 
-	"dependencies": {}
+	"dependencies": {
+		"@chkt/continuity": "1.0.0-beta.3"
+	}
 }
