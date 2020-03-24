@@ -1,4 +1,4 @@
-export function extendTags(tags:string[], add:string) : string[] {
+export function extendTags(tags:ReadonlyArray<string>, add:string) : ReadonlyArray<string> {
 	if (add.search(/^[ _0-9a-z]+$/) !== 0) return tags;
 
 	const res = [ ...tags, ...add.split(' ')];
