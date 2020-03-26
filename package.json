@@ -2,7 +2,7 @@
 	"name": "@chkt/onceupon",
 	"description": "Logging without compromises",
 	"keywords": [ "Log", "Logger" ],
-	"version": "1.0.0-alpha.15",
+	"version": "1.0.0-alpha.16",
 	"license": "MIT",
 
 	"author": {
@@ -33,12 +33,12 @@
 
 	"devDependencies": {
 		"@types/mocha": "^7.0",
-		"@types/node": "^13.7",
-		"mocha": "^7.0",
+		"@types/node": "^13.9",
+		"mocha": "^7.1",
 		"nyc": "^15.0",
-		"ts-node": "^8.6",
+		"ts-node": "^8.8",
 		"tslint": "^6.1",
-		"typescript": "^3.7"
+		"typescript": "^3.8"
 	},
 
 	"dependencies": {

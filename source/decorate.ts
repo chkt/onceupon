@@ -1,16 +1,17 @@
 import { getNameOfLevel } from "./level";
-import { LogContext } from "./context";
+import { Log } from "./context";
 import { createToken, createTokens, LogTokens, token_type } from "./token";
+import { AggregatedContext } from "./aggregate";
 
 
-export type decorateTokens = (tokens:LogTokens, context:LogContext) => LogTokens;
+export type decorateTokens = (data:Log<AggregatedContext>) => LogTokens;
 
 
-export function decorateTimeLevelLog(tokens:LogTokens, context:LogContext) : LogTokens {
+export function decorateTimeLevelLog(data:Log<AggregatedContext>) : LogTokens {
 	return [
-		createToken(token_type.time, context.time),
-		createToken(token_type.level, getNameOfLevel(context.level)),
-		...tokens,
-		...createTokens(token_type.tag, context.tags)
+		createToken(token_type.time, data.context.time),
+		createToken(token_type.level, getNameOfLevel(data.context.level)),
+		...data.tokens,
+		...createTokens(token_type.tag, data.context.tags)
 	];
 }

@@ -1,10 +1,12 @@
+import { createSequencer, Sequencer } from "@chkt/continuity/dist";
 import { log_level } from "./level";
 import { extendTags } from "./tags";
 import { getType, inferType } from "./type";
 import { nowToISO, timingFunction } from "./time";
-import { createLogContext, LogContext, LoggableData } from "./context";
+import { createLog, createLogContext, Log, LogContext, LoggableData } from "./context";
 import { LogTokens } from "./token";
 import { getParser, parsers, Parsers } from "./parse";
+import { AggregatedContext, Aggregator, createAggregator, createNoopAggregator } from "./aggregate";
 import { decorateTimeLevelLog, decorateTokens } from "./decorate";
 import { consoleHandler, handleLog } from "./handler";
 
@@ -16,33 +18,65 @@ export interface LoggerConfig {
 	readonly parsers : Parsers;
 	readonly decorate : decorateTokens;
 	readonly time : timingFunction;
+	readonly aggregate : createAggregator;
 	readonly handle : handleLog;
 }
 
+type asyncTrigger = () => Promise<void>;
+type enqueue = (fn:asyncTrigger) => void;
 
-export type parse = (loggable:any, context:LogContext) => LogTokens;
-export type parseAndHandle = (this:LoggerSettings, data:LoggableData) => Promise<void>;
-
-export interface LoggerSettings extends LoggerConfig {
-	readonly baseTags : string[];
+export interface LoggerHost {
+	readonly config : LoggerConfig;
+	readonly baseTags : ReadonlyArray<string>;
+	readonly sequence : Sequencer;
+	readonly queue : enqueue;
+	readonly aggregate : Aggregator;
 	readonly parse : parse;
 	readonly parseAndHandle : parseAndHandle;
 }
 
 
-function parse(this:LoggerSettings, loggable:any, context:LogContext) : LogTokens {
-	const type = this.infer(loggable);
-	const parser = getParser(this.parsers, type);
+function createQueueHandler() : (fn:asyncTrigger) => void {
+	let q:Promise<void> = Promise.resolve();
+
+	return fn => new Promise(resolve => {
+		q = q.then(() => fn().then(() => {
+			resolve();
+		}));
+	});
+}
+
+
+export type parse = (loggable:any, context:LogContext) => LogTokens;
+export type parseAndHandle = (this:LoggerHost, data:LoggableData) => void;
+
+function parse(this:LoggerHost, loggable:any, context:LogContext) : LogTokens {
+	const type = this.config.infer(loggable);
+	const parser = getParser(this.config.parsers, type);
 
 	return parser(loggable, context);
 }
 
-async function parseAndHandle(this:LoggerSettings, data:LoggableData) : Promise<void> {
-	const parser = getParser(this.parsers, data.type);
-	const context = await createLogContext(this, data);
-	const tokens = this.decorate(parser(data.value, context), context);
+function parseAndHandle(this:LoggerHost, data:LoggableData) : void {
+	const id = this.sequence.register();
 
-	return this.handle(tokens, context);
+	createLogContext(this, data)
+		.then(async context => {
+			const parser = getParser(this.config.parsers, data.type);
+			const tokens = parser(data.value, context);
+
+			await this.sequence.resolve(id);
+
+			this.aggregate.append({ tokens, context });
+		});
+}
+
+function onAggregated(queue:enqueue, config:LoggerConfig, data:Log<AggregatedContext>) : void {
+	queue(() => {
+		const tokens = config.decorate(data);
+
+		return config.handle(createLog(tokens, data.context));
+	});
 }
 
 
@@ -54,17 +88,33 @@ export function getDefaultConfig() : LoggerConfig {
 		parsers,
 		decorate : decorateTimeLevelLog,
 		time : nowToISO(),
+		aggregate : createNoopAggregator,
 		handle : consoleHandler,
 	};
 }
 
-export function getSettings(config:Partial<LoggerConfig>, base:LoggerConfig) : LoggerSettings {
+export function createHost(config:Partial<LoggerConfig>, base:LoggerConfig) : LoggerHost {
 	const settings = { ...base, ...config};
+	const queue = createQueueHandler();
 
 	return {
-		...settings,
+		config : settings,
 		baseTags : extendTags([], settings.tags),
+		sequence : createSequencer(),
+		queue,
+		aggregate : settings.aggregate(onAggregated.bind(null, queue, settings)),
 		parse,
 		parseAndHandle
+	};
+}
+
+export function updateHost(config:Partial<LoggerConfig>, host:LoggerHost) : LoggerHost {
+	const settings = { ...host.config, ...config };
+
+	return {
+		...host,
+		config : settings,
+		baseTags : extendTags([], settings.tags),
+		aggregate : settings.aggregate(onAggregated.bind(null, host.queue, settings))
 	};
 }

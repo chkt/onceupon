@@ -27,9 +27,11 @@ import { log_level } from '@chkt/onceupon/dist/level';
 const logger = onceupon();
 
 async () => {
-    logger.log('foo');
-    logger.log([1, 2, 3], log_level.warn);
-    await logger.log(new Error(), log_level.error, 'reporting api');
+  logger.log('foo');
+  logger.log([1, 2, 3], log_level.warn);
+  await logger
+        .log(new Error(), log_level.error, 'reporting api')
+        .settle();
 }
 ```
 
@@ -50,6 +52,7 @@ const logger = onceupon({
     time : AsyncIterator<string>,
     infer : (loggable:any) => loggable_type,
     parsers : { [P in loggable_type]? : parse<P> },
+    aggregate : (emit:processLog<AggregatedContext>) => Aggregator,
     decorate : (tokens:LogTokens, context:LogContext) => LogTokens,
     handle : (tokens:LogTokens, context:LogContext) => Promise<void>
 });

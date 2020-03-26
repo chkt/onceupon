@@ -1,12 +1,12 @@
 import WritableStream = NodeJS.WritableStream;
 
 import { log_level } from "./level";
-import { LogContext } from "./context";
-import { LogTokens } from "./token";
+import { Log } from "./context";
+import { AggregatedContext } from "./aggregate";
 import { tokensToString } from "./format";
 
 
-export type handleLog = (tokens:LogTokens, context:LogContext) => Promise<void>;
+export type handleLog = (data:Log<AggregatedContext>) => Promise<void>;
 
 type Streams = { [P in log_level] : WritableStream };
 
@@ -16,10 +16,10 @@ function sendMsgToConsole(fn:(msg:string) => any, msg:string) : Promise<void> {
 }
 
 
-export function consoleHandler(tokens:LogTokens, context:LogContext) : Promise<void> {
-	const msg = tokensToString(tokens);
+export function consoleHandler(data:Log<AggregatedContext>) : Promise<void> {
+	const msg = tokensToString(data.tokens);
 
-	switch (context.level) {
+	switch (data.context.level) {
 		case log_level.fatal:
 		case log_level.error : return sendMsgToConsole(console.error, msg);
 		case log_level.warn : return sendMsgToConsole(console.warn, msg);
@@ -33,9 +33,9 @@ export function consoleHandler(tokens:LogTokens, context:LogContext) : Promise<v
 }
 
 export function createStreamHandler(streams:Streams) : handleLog {
-	return (tokens, context) => {
-		const msg = tokensToString(tokens);
-		const stream = streams[context.level];
+	return data => {
+		const msg = tokensToString(data.tokens);
+		const stream = streams[data.context.level];
 
 		return new Promise((resolve, reject) => {
 			stream.write(`${ msg }\n`, err => err === undefined ? resolve() : reject());

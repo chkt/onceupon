@@ -5,14 +5,15 @@ import { Writable } from 'stream';
 import { log_level } from "../source/level";
 import { loggable_type } from "../source/type";
 import { compose } from "../source/compose";
-import { LogContext } from "../source/context";
+import { Log, LogContext } from "../source/context";
 import { createToken, LogTokens, token_type } from "../source/token";
+import { AggregatedContext, createTLAggregator } from "../source/aggregate";
 import { createOutErrHandler } from "../source/handler";
 import logger from '../source';
 
 
 class MockStream extends Writable {
-	public out : Array<{ chunk : any, encoding : string}> = [];
+	public out : { chunk : any, encoding : string}[] = [];
 
 	public _write(chunk:any, encoding:string, cb?:(err?:Error) => void) : void {
 		if (chunk instanceof Buffer) this.out.push({ chunk : chunk.toString(), encoding });
@@ -56,6 +57,10 @@ function tokensToString(tokens:LogTokens) {
 	return res.substring(0, res.length - 1);
 }
 
+async function handle(this:string[], data:Log<AggregatedContext>) : Promise<void> {
+	this.push(tokensToString(data.tokens));
+}
+
 
 describe('onceupon', () => {
 	it('should create a logger instance', () => {
@@ -70,13 +75,13 @@ describe('onceupon', () => {
 		assert(typeof log.threshold === 'function');
 		assert('settings' in log);
 		assert(typeof log.settings === 'function');
+		assert('settle' in log);
+		assert(typeof log.settle === 'function');
 	});
 
 	it('should log a string message to console', async () => {
 		const log = logger();
-		const msg = await mockConsole('log', () => {
-			return log.message('foo');
-		});
+		const msg = await mockConsole('log', () => log.message('foo').settle());
 
 		assert(msg.search(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z notice\s{2}foo$/) === 0);
 	});
@@ -85,43 +90,46 @@ describe('onceupon', () => {
 		const log = logger({
 			time : getIncrement()
 		});
-		const msg = await mockConsole('log', () => {
-			return log.message('foo');
-		});
+
+		const msg = await mockConsole('log', () => log.message('foo').settle());
 
 		assert.strictEqual(msg, '1 notice  foo');
 	});
 
 	it('should allow arbitrary handlers', async () => {
-		let msg:string = '';
+		const msg:string[] = [];
 		const log = logger({
 			time : getIncrement(),
-			handle : async (tokens:LogTokens) => {
-				msg = tokensToString(tokens);
-			}
+			handle : handle.bind(msg)
 		});
 
-		await log.message('foo');
+		await log
+			.message('foo')
+			.settle();
 
-		assert.strictEqual(msg, '1 notice foo');
+		assert.deepStrictEqual(msg, [
+			'1 notice foo'
+		]);
 	});
 
 	it ('should allow arbitrary parsers', async () => {
-		const msgs:string[] = [];
+		const msg:string[] = [];
 		const log = logger({
 			time : getIncrement(),
 			parsers : {
 				[ loggable_type.string ] : message => [ createToken(token_type.message_fragment, message) ]
 			},
-			handle : async (tokens:LogTokens) => {
-				msgs.push(tokensToString(tokens));
+			handle : async (data:Log<AggregatedContext>) => {
+				msg.push(tokensToString(data.tokens));
 			}
 		});
 
-		await log.value('foo');
-		await log.value(1);
+		await log
+			.value('foo')
+			.value(1)
+			.settle();
 
-		assert.deepStrictEqual(msgs, [
+		assert.deepStrictEqual(msg, [
 			'1 notice foo',
 			'2 notice <NOPARSE|fnum>'
 		]);
@@ -135,13 +143,13 @@ describe('onceupon', () => {
 			time : getIncrement()
 		});
 
-		msg.push(await mockConsole('debug', () => log.message('foo', log_level.debug)));
-		msg.push(await mockConsole('log', () => log.message('bar', log_level.verbose)));
-		msg.push(await mockConsole('log', () => log.message('baz', log_level.info)));
-		msg.push(await mockConsole('log', () => log.message('qux', log_level.notice)));
-		msg.push(await mockConsole('warn', () => log.message('bang', log_level.warn)));
-		msg.push(await mockConsole('error', () => log.message('bam', log_level.error)));
-		msg.push(await mockConsole('error', () => log.message('aarg', log_level.fatal)));
+		msg.push(await mockConsole('debug', () => log.message('foo', log_level.debug).settle()));
+		msg.push(await mockConsole('log', () => log.message('bar', log_level.verbose).settle()));
+		msg.push(await mockConsole('log', () => log.message('baz', log_level.info).settle()));
+		msg.push(await mockConsole('log', () => log.message('qux', log_level.notice).settle()));
+		msg.push(await mockConsole('warn', () => log.message('bang', log_level.warn).settle()));
+		msg.push(await mockConsole('error', () => log.message('bam', log_level.error).settle()));
+		msg.push(await mockConsole('error', () => log.message('aarg', log_level.fatal).settle()));
 
 		assert.deepStrictEqual(msg, [
 			'1 debug   foo',
@@ -163,13 +171,15 @@ describe('onceupon', () => {
 			handle : createOutErrHandler(out, err)
 		});
 
-		await log.message('foo', log_level.debug);
-		await log.message('bar', log_level.verbose);
-		await log.message('baz', log_level.info);
-		await log.message('qux', log_level.notice);
-		await log.message('bang', log_level.warn);
-		await log.message('bam', log_level.error);
-		await log.message('aarg', log_level.fatal);
+		await log
+			.message('foo', log_level.debug)
+			.message('bar', log_level.verbose)
+			.message('baz', log_level.info)
+			.message('qux', log_level.notice)
+			.message('bang', log_level.warn)
+			.message('bam', log_level.error)
+			.message('aarg', log_level.fatal)
+			.settle();
 
 		assert.deepStrictEqual(out.out, [
 			{ chunk : '1 debug   foo\n', encoding : 'buffer' },
@@ -189,28 +199,24 @@ describe('onceupon', () => {
 		const msg:string[] = [];
 		const log = logger({
 			time : getIncrement(),
-			handle : async (tokens:LogTokens) => {
-				msg.push(tokensToString(tokens));
-			},
+			handle : handle.bind(msg),
 			threshold : log_level.warn
 		});
 
-		await log.message('foo', log_level.notice);
-		await log.value('bar', log_level.notice);
-		await log.message('baz', log_level.warn);
-		await log.value('qux', log_level.warn);
-
-		const log2 = log.threshold(log_level.notice);
-
-		await log2.message('fox', log_level.notice);
-		await log2.value('bax', log_level.notice);
-		await log2.message('arg', log_level.info);
-		await log2.value('barg', log_level.info);
-
-		const log3 = log2.settings({ threshold : log_level.info });
-
-		await log3.message('arr', log_level.info);
-		await log3.value('err', log_level.info);
+		await log
+			.message('foo', log_level.notice)
+			.value('bar', log_level.notice)
+			.message('baz', log_level.warn)
+			.value('qux', log_level.warn)
+			.threshold(log_level.notice)
+			.message('fox', log_level.notice)
+			.value('bax', log_level.notice)
+			.message('arg', log_level.info)
+			.value('barg', log_level.info)
+			.settings({ threshold : log_level.info })
+			.message('arr', log_level.info)
+			.value('err', log_level.info)
+			.settle();
 
 		assert.deepStrictEqual(msg, [
 			'1 warn baz',
@@ -225,29 +231,29 @@ describe('onceupon', () => {
 	it ('should infer basic object types', async () => {
 		const msg:string[] = [];
 		const log = logger({
-			handle : async (tokens:LogTokens) : Promise<void> => {
-				msg.push(tokensToString(tokens));
-			},
+			handle : handle.bind(msg),
 			parsers : {
 				[ loggable_type.any] : (loggable:any, context:LogContext) : LogTokens => [
 					createToken(token_type.message_fragment, context.type)
 				]
 			},
-			decorate : tokens => tokens
+			decorate : data => data.tokens
 		});
 
-		await log.value(undefined);
-		await log.value(null);
-		await log.value(true);
-		await log.value(1);
-		// @ts-ignore
-		await log.value(1n);
-		await log.value('1');
-		await log.value(Symbol('1'));
-		await log.value(() => undefined);
-		await log.value([1, 2, 3]);
-		await log.value({ foo : 1 });
-		await log.value(new Error());
+		await log
+			.value(undefined)
+			.value(null)
+			.value(true)
+			.value(1)
+			// @ts-ignore
+			.value(1n)
+			.value('1')
+			.value(Symbol('1'))
+			.value(() => undefined)
+			.value([1, 2, 3])
+			.value({ foo : 1 })
+			.value(new Error())
+			.settle();
 
 		assert.deepStrictEqual(msg, [
 			loggable_type.undefined, loggable_type.null,
@@ -261,13 +267,13 @@ describe('onceupon', () => {
 		const msg:string[] = [];
 		const log = logger({
 			time : getIncrement(),
-			handle : async (tokens:LogTokens) : Promise<void> => {
-				msg.push(tokensToString(tokens));
-			}
+			handle : handle.bind(msg)
 		});
 
-		await log.message('foo', log_level.notice, 'bar');
-		await log.message('foo', log_level.notice, 'bar baz');
+		await log
+			.message('foo', log_level.notice, 'bar')
+			.message('foo', log_level.notice, 'bar baz')
+			.settle();
 
 		assert.deepStrictEqual(msg, [
 			'1 notice foo bar',
@@ -280,15 +286,15 @@ describe('onceupon', () => {
 		const log = logger({
 			tags : 'quux',
 			time : getIncrement(),
-			handle : async (tokens:LogTokens) : Promise<void> => {
-				msg.push(tokensToString(tokens));
-			}
+			handle : handle.bind(msg)
 		});
 
-		await log.message('foo', log_level.notice);
-		await log.message('foo', log_level.notice, 'bar');
-		await log.message('foo', log_level.notice, 'bar baz');
-		await log.message('foo', log_level.notice, 'baz quux');
+		await log
+			.message('foo', log_level.notice)
+			.message('foo', log_level.notice, 'bar')
+			.message('foo', log_level.notice, 'bar baz')
+			.message('foo', log_level.notice, 'baz quux')
+			.settle();
 
 		assert.deepStrictEqual(msg, [
 			'1 notice foo quux',
@@ -305,8 +311,8 @@ describe('onceupon', () => {
 			time : getIncrement()
 		});
 
-		msg.push(await mockConsole('log', () => log.message('foo')));
-		msg.push(await mockConsole('log', () => log.message('foo', log_level.notice, 'bar baz')));
+		msg.push(await mockConsole('log', () => log.message('foo').settle()));
+		msg.push(await mockConsole('log', () => log.message('foo', log_level.notice, 'bar baz').settle()));
 
 		assert.deepStrictEqual(msg, [
 			'1 notice  foo .:baz:quux',
@@ -320,12 +326,74 @@ describe('onceupon', () => {
 			time : getIncrement()
 		});
 
-		msg.push(await mockConsole('error', () => log.failure('because I say so')));
-		msg.push(await mockConsole('error', () => log.failure(compose`this is a failure, ${ 'foo' }`)));
+		msg.push(await mockConsole('error', () => log.failure('because I say so').settle()));
+		msg.push(await mockConsole('error', () => log.failure(compose`this is a failure, ${ 'foo' }`).settle()));
 
 		assert.deepStrictEqual(msg, [
 			'1 error   because I say so',
 			'2 error   this is a failure, \'foo\''
+		]);
+	});
+
+	it('should sustain the sequence of logger calls', async() => {
+		async function* delay() {
+			let i = 0;
+			const delays = [ 100, 10 ];
+
+			function sleep(ms:number) : Promise<void> {
+				return new Promise(resolve => {
+					setTimeout(resolve, ms);
+				});
+			}
+
+			while (true) {
+				const n = i++;
+				const d = delays[n % delays.length];
+
+				yield sleep(d).then(() => String(d));
+			}
+		}
+
+		const msg:string[] = [];
+		const log = logger({
+			time : delay(),
+			handle : handle.bind(msg)
+		});
+
+		await log
+			.message('foo')
+			.message('bar')
+			.settle();
+
+		assert.deepStrictEqual(msg, [
+			'100 notice foo',
+			'10 notice bar'
+		]);
+	});
+
+	it('should aggregate message floods when using an aggregator', async () => {
+		const msg:string[] = [];
+		const log = logger({
+			threshold : log_level.info,
+			time : getIncrement(),
+			aggregate : createTLAggregator,
+			handle : handle.bind(msg)
+		});
+
+		await log
+			.message('foo')
+			.message('foo')
+			.message('foo', log_level.info)
+			.message('foo', log_level.info)
+			.message('bar', log_level.info)
+			.message('bar')
+			.settle();
+
+		assert.deepStrictEqual(msg, [
+			'1 notice foo',
+			'3 info foo',
+			'5 info bar',
+			'6 notice bar'
 		]);
 	});
 });

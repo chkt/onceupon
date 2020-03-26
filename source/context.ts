@@ -1,7 +1,8 @@
 import { log_level } from "./level";
 import { extendTags } from "./tags";
 import { loggable_type } from "./type";
-import { LoggerSettings, parse } from "./config";
+import { LogTokens } from "./token";
+import { LoggerHost, parse } from "./config";
 
 
 export interface LoggableData {
@@ -16,19 +17,28 @@ export interface LogContext {
 	readonly time : string;
 	readonly level : log_level;
 	readonly type : loggable_type;
-	readonly tags : string[];
+	readonly tags : ReadonlyArray<string>;
 }
 
-
 export async function createLogContext(
-	settings:LoggerSettings,
+	host:LoggerHost,
 	data:LoggableData
 ) : Promise<LogContext> {
 	return {
-		time : (await settings.time.next()).value,
+		time : (await host.config.time.next()).value,
 		level : data.level,
 		type : data.type,
-		tags : extendTags(settings.baseTags, data.tags),
-		parse : settings.parse.bind(settings)
+		tags : extendTags(host.baseTags, data.tags),
+		parse : host.parse.bind(host)
 	};
+}
+
+
+export interface Log<T extends LogContext> {
+	readonly tokens : LogTokens;
+	readonly context : T;
+}
+
+export function createLog<T extends LogContext>(tokens:LogTokens, context:T) : Log<T> {
+	return { tokens, context };
 }

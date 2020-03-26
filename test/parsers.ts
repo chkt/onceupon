@@ -2,8 +2,10 @@ import * as assert from 'assert';
 import { describe, it } from 'mocha';
 
 import logger from '../source';
-import { tokensToString } from "../source/format";
 import { compose } from "../source/compose";
+import { Log } from "../source/context";
+import { AggregatedContext } from "../source/aggregate";
+import { tokensToString } from "../source/format";
 
 
 async function* getIncrement() {
@@ -12,74 +14,78 @@ async function* getIncrement() {
 	while (true) yield String(++i);
 }
 
+async function handle(this:string[], data:Log<AggregatedContext>) : Promise<void> {
+	this.push(tokensToString(data.tokens));
+}
+
 
 describe('onceupon', () => {
 	it ('should log null and undefined', async () => {
-		const msgs:string[] = [];
+		const msg:string[] = [];
 		const log = logger({
 			tags : 'foo bar',
 			time : getIncrement(),
-			handle : async tokens => {
-				msgs.push(tokensToString(tokens));
-			}
+			handle : handle.bind(msg)
 		});
 
-		await log.value(undefined);
-		await log.value(null);
+		await log
+			.value(undefined)
+			.value(null)
+			.settle();
 
-		assert.deepStrictEqual(msgs, [
+		assert.deepStrictEqual(msg, [
 			'1 notice  undefined .:foo:bar',
 			'2 notice  null .:foo:bar'
 		]);
 	});
 
 	it ('should log booleans', async () => {
-		const msgs:string[] = [];
+		const msg:string[] = [];
 		const log = logger({
 			tags : 'foo bar',
 			time : getIncrement(),
-			handle : async tokens => {
-				msgs.push(tokensToString(tokens));
-			}
+			handle : handle.bind(msg)
 		});
 
-		await log.value(true);
-		await log.value(false);
+		await log
+			.value(true)
+			.value(false)
+			.settle();
 
-		assert.deepStrictEqual(msgs, [
+		assert.deepStrictEqual(msg, [
 			'1 notice  true .:foo:bar',
 			'2 notice  false .:foo:bar'
 		]);
 	});
 
 	it ('should log numbers', async () => {
-		const msgs:string[] = [];
+		const msg:string[] = [];
 		const log = logger({
 			time : getIncrement(),
-			handle : async tokens => {
-				msgs.push(tokensToString(tokens));
-			}
+			handle : handle.bind(msg)
 		});
 
-		await log.value(0);
-		await log.value(1);
-		await log.value(Number.MAX_SAFE_INTEGER);
-		await log.value(Number.MIN_SAFE_INTEGER);
-		await log.value(Number.MAX_SAFE_INTEGER + 1);
-		await log.value(Number.MIN_SAFE_INTEGER - 1);
-		await log.value(999999999.9);
-		await log.value(-999999999.9);
-		await log.value(1000000000.1);
-		await log.value(-1000000000.1);
-		await log.value(0.000001);
-		await log.value(-0.000001);
-		await log.value(0.0000009);
-		await log.value(-0.0000009);
-		await log.value(NaN);
-		await log.value(Number.POSITIVE_INFINITY);
-		await log.value(Number.NEGATIVE_INFINITY);
+		await log
+			.value(0)
+			.value(1)
+			.value(Number.MAX_SAFE_INTEGER)
+			.value(Number.MIN_SAFE_INTEGER)
+			.value(Number.MAX_SAFE_INTEGER + 1)
+			.value(Number.MIN_SAFE_INTEGER - 1)
+			.value(999999999.9)
+			.value(-999999999.9)
+			.value(1000000000.1)
+			.value(-1000000000.1)
+			.value(0.000001)
+			.value(-0.000001)
+			.value(0.0000009)
+			.value(-0.0000009)
+			.value(NaN)
+			.value(Number.POSITIVE_INFINITY)
+			.value(Number.NEGATIVE_INFINITY)
+			.settle();
 
-		assert.deepStrictEqual(msgs, [
+		assert.deepStrictEqual(msg, [
 			'1 notice  0',
 			'2 notice  1',
 			`3 notice  ${ Number.MAX_SAFE_INTEGER.toString() }`,
@@ -101,22 +107,22 @@ describe('onceupon', () => {
 	});
 
 	it ('should log strings', async () => {
-		const msgs:string[] = [];
+		const msg:string[] = [];
 		const log = logger({
 			time : getIncrement(),
-			handle : async tokens => {
-				msgs.push(tokensToString(tokens));
-			}
+			handle : handle.bind(msg)
 		});
 
-		await log.value('foo');
-		await log.value('foo "bar"');
-		await log.value("foo 'bar'");
-		await log.value('foo "bar" \'baz\'');
-		await log.value("foo 'bar' \"baz\"");
-		await log.value('foo "bar" \'\\\'\\\\\'');
+		await log
+			.value('foo')
+			.value('foo "bar"')
+			.value("foo 'bar'")
+			.value('foo "bar" \'baz\'')
+			.value("foo 'bar' \"baz\"")
+			.value('foo "bar" \'\\\'\\\\\'')
+			.settle();
 
-		assert.deepStrictEqual(msgs, [
+		assert.deepStrictEqual(msg, [
 			`1 notice  'foo'`,
 			`2 notice  'foo "bar"'`,
 			`3 notice  "foo 'bar'"`,
@@ -127,28 +133,26 @@ describe('onceupon', () => {
 	});
 
 	it('should log objects', async () => {
-		const msgs:string[] = [];
+		const msg:string[] = [];
 		const log = logger({
 			time : getIncrement(),
-			handle : async tokens => {
-				msgs.push(tokensToString(tokens));
-			}
+			handle : handle.bind(msg)
 		});
 
-		await log.value({ foo : false, bar : 1, baz : { qux : '1'} });
+		await log
+			.value({ foo : false, bar : 1, baz : { qux : '1'} })
+			.settle();
 
-		assert.deepStrictEqual(msgs, [
+		assert.deepStrictEqual(msg, [
 			'1 notice  {\n\tfoo : false,\n\tbar : 1,\n\tbaz : {\n\t\tqux : \'1\'\n\t}\n}'
 		]);
 	});
 
 	it('should log v8 errors', async () => {
-		const msgs:string[] = [];
+		const msg:string[] = [];
 		const log = logger({
-			time: getIncrement(),
-			handle: async tokens => {
-				msgs.push(tokensToString(tokens));
-			}
+			time : getIncrement(),
+			handle : handle.bind(msg)
 		});
 
 		class V8Error extends Error {
@@ -161,16 +165,18 @@ describe('onceupon', () => {
 			}
 		}
 
-		await log.value(new V8Error('foo', 'V8Error: foo\n    at fn (/path/to/file:1:2)'));
-		await log.value(new V8Error('bar', 'V8Error: bar\n    at SomeClass.method [as methodName] (/path/to/file:10:20)'));
-		await log.value(new V8Error('baz', 'V8Error: baz\n    at new SomeClass (/path/to/file:12:34)'));
-		await log.value(new V8Error('qux', 'V8Error: qux\n    at nativeOp (native)'));
-		await log.value(new V8Error('fox', 'V8Error: fox\n    at <anonymous> (unknown location)'));
-		await log.value(new V8Error('bax', 'V8Error: bax\n    at SomeClass.method (eval at SomeClass.other (eval at <anonymous> (/path/to/file:42:23)))'));
-		await log.value(new V8Error('quz', '$ome_error: bang\n    at fn (/path/to/file:42:23)'));
-		await log.value(new V8Error('foz', 'V8Error: foz\n   at fn (http://domain.tld/path/to/file:23:42)'));
+		await log
+			.value(new V8Error('foo', 'V8Error: foo\n    at fn (/path/to/file:1:2)'))
+			.value(new V8Error('bar', 'V8Error: bar\n    at SomeClass.method [as methodName] (/path/to/file:10:20)'))
+			.value(new V8Error('baz', 'V8Error: baz\n    at new SomeClass (/path/to/file:12:34)'))
+			.value(new V8Error('qux', 'V8Error: qux\n    at nativeOp (native)'))
+			.value(new V8Error('fox', 'V8Error: fox\n    at <anonymous> (unknown location)'))
+			.value(new V8Error('bax', 'V8Error: bax\n    at SomeClass.method (eval at SomeClass.other (eval at <anonymous> (/path/to/file:42:23)))'))
+			.value(new V8Error('quz', '$ome_error: bang\n    at fn (/path/to/file:42:23)'))
+			.value(new V8Error('foz', 'V8Error: foz\n   at fn (http://domain.tld/path/to/file:23:42)'))
+			.settle();
 
-		assert.deepStrictEqual(msgs, [
+		assert.deepStrictEqual(msg, [
 			'1 notice  Error:V8Error \'foo\' @/path/to/file 1:2',
 			'2 notice  Error:V8Error \'bar\' @/path/to/file 10:20',
 			'3 notice  Error:V8Error \'baz\' @/path/to/file 12:34',
@@ -183,12 +189,10 @@ describe('onceupon', () => {
 	});
 
 	it('should log errors with file information', async () => {
-		const msgs:string[] = [];
+		const msg:string[] = [];
 		const log = logger({
 			time : getIncrement(),
-			handle : async tokens => {
-				msgs.push(tokensToString(tokens));
-			}
+			handle : handle.bind(msg)
 		});
 
 		// tslint:disable-next-line:max-classes-per-file
@@ -207,20 +211,20 @@ describe('onceupon', () => {
 			}
 		}
 
-		await log.value(new FileInfoError('foo', 'path/to/file', '1', '13'));
+		await log
+			.value(new FileInfoError('foo', 'path/to/file', '1', '13'))
+			.settle();
 
-		assert.deepStrictEqual(msgs, [
+		assert.deepStrictEqual(msg, [
 			'1 notice  SomeError:FileInfoError \'foo\' @path/to/file 1:13'
 		]);
 	});
 
 	it('should log errors with firefox-like stack traces', async () => {
-		const msgs:string[] = [];
+		const msg:string[] = [];
 		const log = logger({
 			time : getIncrement(),
-			handle : async tokens => {
-				msgs.push(tokensToString(tokens));
-			}
+			handle : handle.bind(msg)
 		});
 
 		// tslint:disable-next-line:max-classes-per-file
@@ -236,12 +240,14 @@ describe('onceupon', () => {
 			}
 		}
 
-		await log.value(new FFStackError('bang', 'foo@path/to/file:23:42\n@path/to/other:1:13'));
-		await log.value(new FFStackError('bang', '@path/to/file line 23 > eval:1:1\n@path/to/file:23:42'));
-		await log.value(new FFStackError('bang', '    foo@path/to/file:23:42    '));
-		await log.value(new FFStackError('bang', 'value@http://domain.tld/path/to/file:23:42'));
+		await log
+			.value(new FFStackError('bang', 'foo@path/to/file:23:42\n@path/to/other:1:13'))
+			.value(new FFStackError('bang', '@path/to/file line 23 > eval:1:1\n@path/to/file:23:42'))
+			.value(new FFStackError('bang', '    foo@path/to/file:23:42    '))
+			.value(new FFStackError('bang', 'value@http://domain.tld/path/to/file:23:42'))
+			.settle();
 
-		assert.deepStrictEqual(msgs, [
+		assert.deepStrictEqual(msg, [
 			'1 notice  FFStackError \'bang\' @path/to/file 23:42',
 			'2 notice  FFStackError \'bang\' @path/to/file line 23 > eval 1:1',
 			'3 notice  FFStackError \'bang\' @path/to/file 23:42',
@@ -250,12 +256,10 @@ describe('onceupon', () => {
 	});
 
 	it ('should log errors with safari-like stack traces', async () => {
-		const msgs:string[] = [];
+		const msg:string[] = [];
 		const log = logger({
 			time : getIncrement(),
-			handle : async tokens => {
-				msgs.push(tokensToString(tokens));
-			}
+			handle : handle.bind(msg)
 		});
 
 		// tslint:disable-next-line:max-classes-per-file
@@ -271,13 +275,15 @@ describe('onceupon', () => {
 			}
 		}
 
-		await log.value(new JsCoreStackError('bang', 'foo@path/to/file:23:42\n@path/to/other:1:13'));
-		await log.value(new JsCoreStackError('bang', 'foo@path/to/file:23:42\nbar@[native code]'));
-		await log.value(new JsCoreStackError('bang', '    foo@path/to/file:23:42    '));
-		await log.value(new JsCoreStackError('bang', 'foo@http://domain.tld/path/to/file:23:42'));
-		await log.value(new JsCoreStackError('bang', 'foo@[native code]'));
+		await log
+			.value(new JsCoreStackError('bang', 'foo@path/to/file:23:42\n@path/to/other:1:13'))
+			.value(new JsCoreStackError('bang', 'foo@path/to/file:23:42\nbar@[native code]'))
+			.value(new JsCoreStackError('bang', '    foo@path/to/file:23:42    '))
+			.value(new JsCoreStackError('bang', 'foo@http://domain.tld/path/to/file:23:42'))
+			.value(new JsCoreStackError('bang', 'foo@[native code]'))
+			.settle();
 
-		assert.deepStrictEqual(msgs, [
+		assert.deepStrictEqual(msg, [
 			"1 notice  JsCoreStackError 'bang' @path/to/file 23:42",
 			"2 notice  JsCoreStackError 'bang' @path/to/file 23:42",
 			"3 notice  JsCoreStackError 'bang' @path/to/file 23:42",
@@ -287,12 +293,10 @@ describe('onceupon', () => {
 	});
 
 	it ('should report unsolvable traces', async () => {
-		const msgs:string[] = [];
+		const msg:string[] = [];
 		const log = logger({
 			time : getIncrement(),
-			handle : async tokens => {
-				msgs.push(tokensToString(tokens));
-			}
+			handle : handle.bind(msg)
 		});
 
 		// tslint:disable-next-line:max-classes-per-file
@@ -306,41 +310,43 @@ describe('onceupon', () => {
 			}
 		}
 
-		await log.value(new OddTraceError('foo', '  1:23 /path/to/file foo  '));
+		await log
+			.value(new OddTraceError('foo', '  1:23 /path/to/file foo  '))
+			.settle();
 
-		assert.deepStrictEqual(msgs, [
+		assert.deepStrictEqual(msg, [
 			'1 notice  Error:OddTraceError \'foo\' <ODDTRACE|  1:23 /path/to/file foo  >'
 		]);
 	});
 
 	it('should log arrays', async () => {
-		const msgs:string[] = [];
+		const msg:string[] = [];
 		const log = logger({
 			time : getIncrement(),
-			handle : async tokens => {
-				msgs.push(tokensToString(tokens));
-			}
+			handle : handle.bind(msg)
 		});
 
-		await log.value([ true, 1, 'foo' ]);
+		await log
+			.value([ true, 1, 'foo' ])
+			.settle();
 
-		assert.deepStrictEqual(msgs, [
+		assert.deepStrictEqual(msg, [
 			'1 notice  [\n\ttrue,\n\t1,\n\t\'foo\'\n]'
 		]);
 	});
 
 	it('should log compositions', async () => {
-		const msgs:string[] = [];
+		const msg:string[] = [];
 		const log = logger({
 			time : getIncrement(),
-			handle : async tokens => {
-				msgs.push(tokensToString(tokens));
-			}
+			handle : handle.bind(msg)
 		});
 
-		await log.value(compose`foo ${ 'bar' }`);
+		await log
+			.value(compose`foo ${ 'bar' }`)
+			.settle();
 
-		assert.deepStrictEqual(msgs, [
+		assert.deepStrictEqual(msg, [
 			'1 notice  foo \'bar\''
 		]);
 	});
