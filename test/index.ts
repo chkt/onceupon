@@ -41,12 +41,10 @@ async function mockConsole(prop:'debug'|'log'|'warn'|'error', op:() => Promise<v
 }
 
 
-async function* getIncrement() {
+function getIncrement() {
 	let i = 0;
 
-	while (true) {
-		yield String(++i);
-	}
+	return () => Promise.resolve(String(++i));
 }
 
 function tokensToString(tokens:LogTokens) {
@@ -336,7 +334,7 @@ describe('onceupon', () => {
 	});
 
 	it('should sustain the sequence of logger calls', async() => {
-		async function* delay() {
+		function delay() {
 			let i = 0;
 			const delays = [ 100, 10 ];
 
@@ -346,11 +344,11 @@ describe('onceupon', () => {
 				});
 			}
 
-			while (true) {
+			return () => {
 				const n = i++;
 				const d = delays[n % delays.length];
 
-				yield sleep(d).then(() => String(d));
+				return sleep(d).then(() => String(d));
 			}
 		}
 

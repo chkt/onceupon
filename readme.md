@@ -49,7 +49,7 @@ import { parse } from '@chkt/onceuppn/dist/parse';
 const logger = onceupon({
     threshold : log_level,
     tags : string,
-    time : AsyncIterator<string>,
+    time : () => Promise<string>,
     infer : (loggable:any) => loggable_type,
     parsers : { [P in loggable_type]? : parse<P> },
     aggregate : (emit:processLog<AggregatedContext>) => Aggregator,

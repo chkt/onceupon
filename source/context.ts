@@ -25,7 +25,7 @@ export async function createLogContext(
 	data:LoggableData
 ) : Promise<LogContext> {
 	return {
-		time : (await host.config.time.next()).value,
+		time : await host.config.time(),
 		level : data.level,
 		type : data.type,
 		tags : extendTags(host.baseTags, data.tags),

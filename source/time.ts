@@ -1,4 +1,4 @@
-export type timingFunction = AsyncIterator<string>;
+export type getTime = () => Promise<string>;
 
 
 function padTimeComponent(n:number) : string {
@@ -6,22 +6,20 @@ function padTimeComponent(n:number) : string {
 }
 
 
-export async function* nowToISO() : AsyncIterableIterator<string> {
-	while (true) {
-		const now = new Date();
+export async function nowToUtcIso() : Promise<string> {
+	const now = new Date();
 
-		yield `${
-			now.getUTCFullYear()
-		}-${
-			padTimeComponent(now.getUTCMonth() + 1)
-		}-${
-			padTimeComponent(now.getUTCDate())
-		}T${
-			padTimeComponent(now.getUTCHours())
-		}:${
-			padTimeComponent(now.getUTCMinutes())
-		}:${
-			padTimeComponent(now.getUTCSeconds())
-		}Z`;
-	}
+	return Promise.resolve(`${
+		now.getUTCFullYear()
+	}-${
+		padTimeComponent(now.getUTCMonth() + 1)
+	}-${
+		padTimeComponent(now.getUTCDate())
+	}T${
+		padTimeComponent(now.getUTCHours())
+	}:${
+		padTimeComponent(now.getUTCMinutes())
+	}:${
+		padTimeComponent(now.getUTCSeconds())
+	}Z`);
 }

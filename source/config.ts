@@ -2,7 +2,7 @@ import { createSequencer, Sequencer } from "@chkt/continuity/dist";
 import { log_level } from "./level";
 import { extendTags } from "./tags";
 import { getType, inferType } from "./type";
-import { nowToISO, timingFunction } from "./time";
+import { getTime, nowToUtcIso } from "./time";
 import { createLog, createLogContext, Log, LogContext, LoggableData } from "./context";
 import { LogTokens } from "./token";
 import { getParser, parsers, Parsers } from "./parse";
@@ -17,7 +17,7 @@ export interface LoggerConfig {
 	readonly infer : inferType;
 	readonly parsers : Parsers;
 	readonly decorate : decorateTokens;
-	readonly time : timingFunction;
+	readonly time : getTime;
 	readonly aggregate : createAggregator;
 	readonly handle : handleLog;
 }
@@ -87,7 +87,7 @@ export function getDefaultConfig() : LoggerConfig {
 		infer : getType,
 		parsers,
 		decorate : decorateTimeLevelLog,
-		time : nowToISO(),
+		time : nowToUtcIso,
 		aggregate : createNoopAggregator,
 		handle : consoleHandler,
 	};

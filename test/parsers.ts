@@ -8,10 +8,10 @@ import { AggregatedContext } from "../source/aggregate";
 import { tokensToString } from "../source/format";
 
 
-async function* getIncrement() {
+function getIncrement() {
 	let i = 0;
 
-	while (true) yield String(++i);
+	return () => Promise.resolve(String(++i));
 }
 
 async function handle(this:string[], data:Log<AggregatedContext>) : Promise<void> {
