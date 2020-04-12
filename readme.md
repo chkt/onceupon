@@ -21,39 +21,73 @@ npm install @chkt/onceupon
 Initialize the logger by importing the default export and calling it:
 
 ```typescript
-import onceupon from '@chkt/onceupon';
-import { log_level } from '@chkt/onceupon/dist/level';
+import { createLogger, log_level } from '@chkt/onceupon';
 
-const logger = onceupon();
+const logger = createLogger();
 
 async () => {
-  logger.log('foo');
-  logger.log([1, 2, 3], log_level.warn);
   await logger
-        .log(new Error(), log_level.error, 'reporting api')
-        .settle();
+    .log('foo')
+    .log([1, 2, 3], log_level.warn)
+    .log(new Error(), log_level.error, 'reporting api')
+    .settle();
 }
 ```
 
 The initializer supports extensive configuration:
 
 ```typescript
-import onceupon from '@chkt/onceupon';
+import { createLogger, log_level } from '@chkt/onceupon';
+import { getTime} from "@chkt/onceupon/dist/time";
+import { inferType } from "@chkt/onceupon/dist/type";
+import { Parsers } from "@chkt/onceupon/dist/parse";
+import { createAggregator } from "@chkt/onceupon/dist/aggregate";
+import { decorateTokens } from "@chkt/onceupon/dist/decorate";
+import { handleLog } from "@chkt/onceupon/dist/handler";
 
-import { log_level } from '@chkt/onceupon/dist/level';
-import { loggable_type } from '@chkt/onceupon/dist/type';
-import { LogContext } from '@chkt/onceupon/dist/context';
-import { LogTokens } from '@chkt/onceupon/dist/token';
-import { parse } from '@chkt/onceuppn/dist/parse';
-
-const logger = onceupon({
-    threshold : log_level,
-    tags : string,
-    time : () => Promise<string>,
-    infer : (loggable:any) => loggable_type,
-    parsers : { [P in loggable_type]? : parse<P> },
-    aggregate : (emit:processLog<AggregatedContext>) => Aggregator,
-    decorate : (tokens:LogTokens, context:LogContext) => LogTokens,
-    handle : (tokens:LogTokens, context:LogContext) => Promise<void>
+const logger = createLogger({
+  threshold : log_level,
+  tags : string,
+  time : getTime,
+  infer : inferType,
+  parsers : Parsers,
+  aggregate : createAggregator,
+  decorate : decorateTokens,
+  handle : handleLog
 });
+```
+
+## Public api
+```typescript
+const enum log_level {
+  fatal,
+  error,
+  warn,
+  notice,
+  info,
+  verbose,
+  debug
+}
+
+export interface LoggerConfig {
+  readonly threshold : log_level;
+  readonly tags : string;
+  readonly infer : inferType;
+  readonly parsers : Parsers;
+  readonly time : getTime;
+  readonly aggregate : createAggregator;
+  readonly decorate : decorateTokens;
+  readonly handle : handleLog;
+}
+
+interface Logger {
+  message(message:string|Composition, level?:log_level, tags?:string) : Logger;
+  value(value:any, level?:log_level, tags?:string) : Logger;
+  failure(reason:any, level?:log_level, tags?:string) : Logger;
+  threshold(threshold:log_level) : Logger;
+  settings(settings:Partial<LoggerConfig>) : Logger;
+  settle() : Promise<void>;
+}
+
+type createLogger = (settings?:Partial<LoggerConfig>) => Logger;
 ```

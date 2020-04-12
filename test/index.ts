@@ -2,14 +2,13 @@ import * as assert from 'assert';
 import { describe, it } from 'mocha';
 
 import { Writable } from 'stream';
-import { log_level } from "../source/level";
 import { loggable_type } from "../source/type";
 import { compose } from "../source/compose";
 import { Log, LogContext } from "../source/context";
 import { createToken, LogTokens, token_type } from "../source/token";
 import { AggregatedContext, createTLAggregator } from "../source/aggregate";
 import { createOutErrHandler } from "../source/handler";
-import logger from '../source';
+import { createLogger, log_level } from '../source';
 
 
 class MockStream extends Writable {
@@ -62,7 +61,7 @@ async function handle(this:string[], data:Log<AggregatedContext>) : Promise<void
 
 describe('onceupon', () => {
 	it('should create a logger instance', () => {
-		const log = logger();
+		const log = createLogger();
 
 		assert(typeof log === 'object');
 		assert('message' in log);
@@ -78,14 +77,14 @@ describe('onceupon', () => {
 	});
 
 	it('should log a string message to console', async () => {
-		const log = logger();
+		const log = createLogger();
 		const msg = await mockConsole('log', () => log.message('foo').settle());
 
 		assert(msg.search(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z notice\s{2}foo$/) === 0);
 	});
 
 	it('should allow arbitrary time sources', async () => {
-		const log = logger({
+		const log = createLogger({
 			time : getIncrement()
 		});
 
@@ -96,7 +95,7 @@ describe('onceupon', () => {
 
 	it('should allow arbitrary handlers', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			time : getIncrement(),
 			handle : handle.bind(msg)
 		});
@@ -112,7 +111,7 @@ describe('onceupon', () => {
 
 	it ('should allow arbitrary parsers', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			time : getIncrement(),
 			parsers : {
 				[ loggable_type.string ] : message => [ createToken(token_type.message_fragment, message) ]
@@ -136,7 +135,7 @@ describe('onceupon', () => {
 	it('should log a string message to the assigned console method', async () => {
 		const msg:string[] = [];
 
-		const log = logger({
+		const log = createLogger({
 			threshold : log_level.debug,
 			time : getIncrement()
 		});
@@ -163,7 +162,7 @@ describe('onceupon', () => {
 	it('should log a string message to an arbitrarily assigned stream', async () => {
 		const out = new MockStream();
 		const err = new MockStream();
-		const log = logger({
+		const log = createLogger({
 			time : getIncrement(),
 			threshold : log_level.debug,
 			handle : createOutErrHandler(out, err)
@@ -195,7 +194,7 @@ describe('onceupon', () => {
 
 	it('should silently drop logs below the threshold', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			time : getIncrement(),
 			handle : handle.bind(msg),
 			threshold : log_level.warn
@@ -228,7 +227,7 @@ describe('onceupon', () => {
 
 	it ('should infer basic object types', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			handle : handle.bind(msg),
 			parsers : {
 				[ loggable_type.any] : (loggable:any, context:LogContext) : LogTokens => [
@@ -263,7 +262,7 @@ describe('onceupon', () => {
 
 	it('should decorate with tags', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			time : getIncrement(),
 			handle : handle.bind(msg)
 		});
@@ -281,7 +280,7 @@ describe('onceupon', () => {
 
 	it('should decorate with default tags', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			tags : 'quux',
 			time : getIncrement(),
 			handle : handle.bind(msg)
@@ -304,7 +303,7 @@ describe('onceupon', () => {
 
 	it('should format tags when using the default handler', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			tags : 'baz quux',
 			time : getIncrement()
 		});
@@ -320,7 +319,7 @@ describe('onceupon', () => {
 
 	it ('should treat strings as messages when using the failure reporter', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			time : getIncrement()
 		});
 
@@ -353,7 +352,7 @@ describe('onceupon', () => {
 		}
 
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			time : delay(),
 			handle : handle.bind(msg)
 		});
@@ -371,7 +370,7 @@ describe('onceupon', () => {
 
 	it('should aggregate message floods when using an aggregator', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			threshold : log_level.info,
 			time : getIncrement(),
 			aggregate : createTLAggregator,

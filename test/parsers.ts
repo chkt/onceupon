@@ -1,11 +1,11 @@
 import * as assert from 'assert';
 import { describe, it } from 'mocha';
 
-import logger from '../source';
 import { compose } from "../source/compose";
 import { Log } from "../source/context";
 import { AggregatedContext } from "../source/aggregate";
 import { tokensToString } from "../source/format";
+import { createLogger } from '../source/logger';
 
 
 function getIncrement() {
@@ -22,7 +22,7 @@ async function handle(this:string[], data:Log<AggregatedContext>) : Promise<void
 describe('onceupon', () => {
 	it ('should log null and undefined', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			tags : 'foo bar',
 			time : getIncrement(),
 			handle : handle.bind(msg)
@@ -41,7 +41,7 @@ describe('onceupon', () => {
 
 	it ('should log booleans', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			tags : 'foo bar',
 			time : getIncrement(),
 			handle : handle.bind(msg)
@@ -60,7 +60,7 @@ describe('onceupon', () => {
 
 	it ('should log numbers', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			time : getIncrement(),
 			handle : handle.bind(msg)
 		});
@@ -108,7 +108,7 @@ describe('onceupon', () => {
 
 	it ('should log strings', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			time : getIncrement(),
 			handle : handle.bind(msg)
 		});
@@ -134,7 +134,7 @@ describe('onceupon', () => {
 
 	it('should log objects', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			time : getIncrement(),
 			handle : handle.bind(msg)
 		});
@@ -150,7 +150,7 @@ describe('onceupon', () => {
 
 	it('should log v8 errors', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			time : getIncrement(),
 			handle : handle.bind(msg)
 		});
@@ -190,7 +190,7 @@ describe('onceupon', () => {
 
 	it('should log errors with file information', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			time : getIncrement(),
 			handle : handle.bind(msg)
 		});
@@ -222,7 +222,7 @@ describe('onceupon', () => {
 
 	it('should log errors with firefox-like stack traces', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			time : getIncrement(),
 			handle : handle.bind(msg)
 		});
@@ -257,7 +257,7 @@ describe('onceupon', () => {
 
 	it ('should log errors with safari-like stack traces', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			time : getIncrement(),
 			handle : handle.bind(msg)
 		});
@@ -294,7 +294,7 @@ describe('onceupon', () => {
 
 	it ('should report unsolvable traces', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			time : getIncrement(),
 			handle : handle.bind(msg)
 		});
@@ -321,7 +321,7 @@ describe('onceupon', () => {
 
 	it('should log arrays', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			time : getIncrement(),
 			handle : handle.bind(msg)
 		});
@@ -337,7 +337,7 @@ describe('onceupon', () => {
 
 	it('should log compositions', async () => {
 		const msg:string[] = [];
-		const log = logger({
+		const log = createLogger({
 			time : getIncrement(),
 			handle : handle.bind(msg)
 		});
