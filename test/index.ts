@@ -23,14 +23,17 @@ class MockStream extends Writable {
 }
 
 async function mockConsole(prop:'debug'|'log'|'warn'|'error', op:() => Promise<void>) : Promise<string> {
-	if (!(prop in console)) throw new Error('console in unknown state');
-
-	const backup = console[prop];
 	let res:string = '';
 
-	console[prop] = (message:string) : void => {
+	function captureMessage(message:string) : void {
 		res = message;
-	};
+	}
+
+	if (!(prop in console) || console[prop] === captureMessage) throw new Error('console in unknown state');
+
+	const backup = console[prop];
+
+	console[prop] = captureMessage;
 
 	await op();
 
