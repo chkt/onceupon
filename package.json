@@ -17,14 +17,14 @@
 	},
 
 	"engines": {
-		"node" : ">=10.0"
+		"node" : ">=8.0"
 	},
 
 	"files": [ "dist" ],
 	"main": "./dist/index.js",
 
 	"scripts" : {
-		"prepublishOnly": "yarn run test && yarn run lint && yarn outdated && yarn run build",
+		"prepublishOnly": "yarn upgrade && yarn outdated && yarn run test && yarn run lint && yarn run build",
 
 		"lint" : "./node_modules/tslint/bin/tslint -p tsconfig.json",
 		"test" : "./node_modules/mocha/bin/mocha -r ts-node/register test/**/*.ts",
@@ -42,6 +42,6 @@
 	},
 
 	"dependencies": {
-		"@chkt/continuity": "1.0.0-beta.3"
+		"@chkt/continuity": "1.0.0-beta.4"
 	}
 }
