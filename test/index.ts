@@ -22,6 +22,16 @@ class MockStream extends Writable {
 	}
 }
 
+function isNodeVersion(min:number, max?:number) : boolean {
+	const match = process.version.match(/^v(\d+)/);
+
+	if (match === null) return false;
+
+	const v = Number.parseInt(match[1], 10);
+
+	return v >= min && (max === undefined || v <= max);
+}
+
 async function mockConsole(prop:'debug'|'log'|'warn'|'error', op:() => Promise<void>) : Promise<string> {
 	let res:string = '';
 
@@ -245,8 +255,6 @@ describe('onceupon', () => {
 			.value(null)
 			.value(true)
 			.value(1)
-			// @ts-ignore
-			.value(1n)
 			.value('1')
 			.value(Symbol('1'))
 			.value(() => undefined)
@@ -257,9 +265,32 @@ describe('onceupon', () => {
 
 		assert.deepStrictEqual(msg, [
 			loggable_type.undefined, loggable_type.null,
-			loggable_type.boolean, loggable_type.number, loggable_type.bigint,
+			loggable_type.boolean, loggable_type.number,
 			loggable_type.string, loggable_type.symbol,
 			loggable_type.function, loggable_type.array, loggable_type.object, loggable_type.error
+		]);
+	});
+
+	it('should infer bigints if supported', async function() {
+		if (!isNodeVersion(10)) this.skip();
+
+		const msg:string[] = [];
+		const log = createLogger({
+			handle : handle.bind(msg),
+			parsers : {
+				[ loggable_type.any ] : (loggable:any, context:LogContext) : LogTokens => [
+					createToken(token_type.message_fragment, context.type)
+				]
+			},
+			decorate : data => data.tokens
+		});
+
+		await log
+			.value(BigInt(1))
+			.settle();
+
+		assert.deepStrictEqual(msg, [
+			loggable_type.bigint
 		]);
 	});
 
