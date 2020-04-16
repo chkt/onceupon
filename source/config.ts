@@ -40,9 +40,7 @@ function createQueueHandler() : (fn:asyncTrigger) => void {
 	let q:Promise<void> = Promise.resolve();
 
 	return fn => new Promise(resolve => {
-		q = q.then(() => fn().then(() => {
-			resolve();
-		}));
+		q = q.then(() => fn().then(resolve));
 	});
 }
 
@@ -61,13 +59,13 @@ function parseAndHandle(this:LoggerHost, data:LoggableData) : void {
 	const id = this.sequence.register();
 
 	createLogContext(this, data)
-		.then(async context => {
-			const parser = getParser(this.config.parsers, data.type);
-			const tokens = parser(data.value, context);
+		.then(context => {
+			this.sequence.schedule(id, () => {
+				const parser = getParser(this.config.parsers, data.type);
+				const tokens = parser(data.value, context);
 
-			await this.sequence.resolve(id);
-
-			this.aggregate.append({ tokens, context });
+				this.aggregate.append(createLog(tokens, context));
+			});
 		});
 }
 
