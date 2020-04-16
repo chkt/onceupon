@@ -59,18 +59,14 @@ function getLogger(host:LoggerHost) : Logger {
 			return getLogger(updateHost(config, host));
 		},
 		settle() {
-			const id = host.sequence.register();
-
-			return new Promise(async resolve => {
-				await host.sequence.resolve(id);
-
-				host.aggregate.flush();
-				host.queue(() => {
-					resolve();
-
-					return Promise.resolve();
-				});
-			});
+			return host.sequence
+				.immediate()
+				.then(() => new Promise(resolve => {
+					host.aggregate.flush();
+					host.queue(async () => {
+						resolve();
+					});
+				}));
 		}
 	};
 }
