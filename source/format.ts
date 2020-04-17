@@ -29,6 +29,29 @@ function getSpacing(depth:number) {
 	return '\n'.padEnd(1 + depth, '\t');
 }
 
+export function formatLevel(level:string) : string {
+	return level.padEnd(7);
+}
+
+export function formatCount(count:string) : string {
+	const map:ReadonlyArray<[number, string]> = [[1e0, ''], [1e3, 'K'], [1e6, 'M'], [1e9, 'G'], [1e12, 'T']];
+	const n = Number.parseFloat(count);
+
+	if (Number.isNaN(n) || Math.round(n) < 1) throw new RangeError();
+
+	for (const item of map) {
+		const m = item[0], s = n / m, r = Math.round(s);
+
+		if (r > 999) continue;
+
+		const f = m > 1 && Math.round(s * 10) < 100 ? 1 : 0;
+
+		return `${ s.toFixed(f) }${ item[1] }`.padStart(4);
+	}
+
+	return `999${ map[map.length - 1][1] }`;
+}
+
 
 function getDelim(prev:token_type|null, next:token_type, depth:number) : string {
 	if (prev === null) return depth === 0 ? '' : getSpacing(depth);
@@ -47,26 +70,16 @@ function getDelim(prev:token_type|null, next:token_type, depth:number) : string 
 
 
 function transformLevel(token:LogToken) : LogToken {
-	return createToken(token.type, token.content.padEnd(7));
+	return createToken(token.type, formatLevel(token.content));
 }
 
 function transformCount(token:LogToken) : LogToken {
-	const map:ReadonlyArray<[number, string]> = [[1e0, ''], [1e3, 'K'], [1e6, 'M'], [1e9, 'G'], [1e12, 'T']];
-	const n = Number.parseFloat(token.content);
-
-	if (Number.isNaN(n) || Math.round(n) < 1) return createScopeToken(token_type.self_err, transformFail(token.content));
-
-	for (const item of map) {
-		const m = item[0], s = n / m, r = Math.round(s);
-
-		if (r > 999) continue;
-
-		const f = m > 1 && Math.round(s * 10) < 100 ? 1 : 0;
-
-		return createToken(token.type, `${ s.toFixed(f) }${ item[1] }`.padStart(4));
+	try {
+		return createToken(token.type, formatCount(token.content));
 	}
-
-	return createToken(token.type, `999${ map[map.length - 1][1] }`);
+	catch (err) {
+		return createScopeToken(token_type.self_err, transformFail('count', token.content));
+	}
 }
 
 function transformString(token:LogToken) : LogToken {
