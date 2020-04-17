@@ -2,6 +2,7 @@ export const enum token_type {
 	time,
 	level,
 	tag,
+	count,
 	message_fragment,
 	scalar_undefined,
 	scalar_bool,

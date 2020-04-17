@@ -3,7 +3,8 @@ import { LogToken, LogTokens, token_type } from "./token";
 
 export const enum failure_type {
 	no_parser = 'NOPARSE',
-	odd_trace = 'ODDTRACE'
+	odd_trace = 'ODDTRACE',
+	bad_transform = 'BADTRN'
 }
 
 
@@ -23,4 +24,8 @@ export function parseFail(type:string) : LogTokens {
 
 export function stackFail(line:string) : LogTokens {
 	return [ createFailureToken(createTokenContent(failure_type.odd_trace, line)) ];
+}
+
+export function transformFail(source:string) : LogTokens {
+	return [ createFailureToken(createTokenContent(failure_type.bad_transform, source)) ];
 }

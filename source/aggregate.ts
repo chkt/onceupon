@@ -42,9 +42,14 @@ function createTimer(fn:trigger, delay:number) : TimerContext {
 function resetTimer(context:TimerContext, fn?:trigger) : TimerContext {
 	if (context.id !== null) clearTimeout(context.id);
 
-	const id = setTimeout(fn !== undefined ? fn : context.fn, context.delay);
+	const cb = fn ?? context.fn;
+	const id = setTimeout(cb, context.delay);
 
-	return { ...context, id };
+	return {
+		id,
+		delay : context.delay,
+		fn : cb
+	};
 }
 
 function tripTimer(context:TimerContext) : void {
@@ -92,7 +97,8 @@ export function createTLAggregator(emit:processLog<AggregatedContext>, maxDelay:
 					emit(next);
 					timer = null;
 				}, maxDelay);
-			} else {
+			}
+			else {
 				next = createLog(data.tokens, updateAggregatedContext(prev.context, data.context));
 
 				timer = resetTimer(timer, () => {
