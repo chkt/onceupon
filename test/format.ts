@@ -16,8 +16,8 @@ function assertTokens(descs:ReadonlyArray<[token_type, string]>, result:string) 
 
 describe('tokensToString', () => {
 	it('should format count tokens', () => {
-		assertTokens([[ token_type.count, Number.NaN.toString() ]], '<BADTRN|NaN>');
-		assertTokens([[ token_type.count, '0' ]], '<BADTRN|0>');
+		assertTokens([[ token_type.count, Number.NaN.toString() ]], '<BADTRN|[count]NaN>');
+		assertTokens([[ token_type.count, '0' ]], '<BADTRN|[count]0>');
 		assertTokens([[ token_type.count, '0.9' ]], '   1');
 		assertTokens([[ token_type.count, '1' ]], '   1');
 		assertTokens([[ token_type.count, '10' ]], '  10');

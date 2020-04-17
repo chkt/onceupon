@@ -26,6 +26,6 @@ export function stackFail(line:string) : LogTokens {
 	return [ createFailureToken(createTokenContent(failure_type.odd_trace, line)) ];
 }
 
-export function transformFail(source:string) : LogTokens {
-	return [ createFailureToken(createTokenContent(failure_type.bad_transform, source)) ];
+export function transformFail(name:string, content:string) : LogTokens {
+	return [ createFailureToken(createTokenContent(failure_type.bad_transform, `[${ name }]${ content }`)) ];
 }
