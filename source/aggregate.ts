@@ -1,35 +1,32 @@
-import { createLog, Log, LogContext } from "./context";
-import { isTokensEqual } from "./token";
-
-
-type processLog<T extends LogContext> = (data:Log<T>) => void;
-
-
-export interface AggregatedContext extends LogContext {
-	readonly count : number;
-	readonly earliest : string;
-}
-
-function createAggregatedContext(context:LogContext) : AggregatedContext {
-	return { ...context, count : 1, earliest : context.time };
-}
-
-function updateAggregatedContext(base:AggregatedContext, supplement:LogContext) {
-	return {
-		...supplement,
-		earliest : base.earliest,
-		count : base.count + 1
-	};
-}
+import { createLog, Log, LogContext } from './context';
+import { isTokensEqual } from './token';
 
 
 type trigger = () => void;
+type processLog = (data:Log) => void;
 
 interface TimerContext {
 	readonly id : NodeJS.Timer;
 	readonly delay : number;
 	readonly fn : trigger;
 }
+
+export interface Aggregator {
+	readonly append : processLog;
+	readonly flush : trigger;
+}
+
+export type createAggregator = (emit:processLog) => Aggregator;
+
+
+function updateContext(base:LogContext, supplement:LogContext) {
+	return {
+		...supplement,
+		from : base.from,
+		count : base.count + supplement.count
+	};
+}
+
 
 function createTimer(fn:trigger, delay:number) : TimerContext {
 	return {
@@ -59,26 +56,15 @@ function tripTimer(context:TimerContext) : void {
 }
 
 
-export interface Aggregator {
-	readonly append : processLog<LogContext>;
-	readonly flush : trigger;
-}
-
-export type createAggregator = (emit:processLog<AggregatedContext>) => Aggregator;
-
-
-export function createNoopAggregator(emit:processLog<AggregatedContext>) : Aggregator {
+export function createNoopAggregator(emit:processLog) : Aggregator {
 	return {
-		append : data => emit(createLog(
-			data.tokens,
-			createAggregatedContext(data.context)
-		)),
+		append : data => emit(data),
 		flush : () => undefined
 	};
 }
 
-export function createTLAggregator(emit:processLog<AggregatedContext>, maxDelay:number = 100) : Aggregator {
-	let prev:Log<AggregatedContext>;
+export function createTLAggregator(emit:processLog, maxDelay:number = 100) : Aggregator {
+	let prev:Log;
 	let timer:TimerContext|null = null;
 
 	return {
@@ -88,10 +74,10 @@ export function createTLAggregator(emit:processLog<AggregatedContext>, maxDelay:
 				timer = null;
 			}
 
-			let next:Log<AggregatedContext>;
+			let next:Log;
 
 			if (timer === null) {
-				next = createLog(data.tokens, createAggregatedContext(data.context));
+				next = data;
 
 				timer = createTimer(() => {
 					emit(next);
@@ -99,7 +85,7 @@ export function createTLAggregator(emit:processLog<AggregatedContext>, maxDelay:
 				}, maxDelay);
 			}
 			else {
-				next = createLog(data.tokens, updateAggregatedContext(prev.context, data.context));
+				next = createLog(data.tokens, updateContext(prev.context, data.context));
 
 				timer = resetTimer(timer, () => {
 					emit(next);

@@ -1,12 +1,12 @@
-import { loggable_type } from "./type";
-import { Composition } from "./compose";
-import { LogContext } from "./context";
-import { LogTokens } from "./token";
-import { parseFail } from "./failure";
-import { parseBool, parseNumber, parseString, parseUndefined } from "./parser/scalars";
-import { parseArray, parseNull, parseObject } from "./parser/object";
-import { parseMessage, parseComposition } from "./parser/message";
-import { parseError } from "./parser/error";
+import { inferType, loggable_type } from './type';
+import { Composition } from './compose';
+import { LogContext, LoggableData } from './context';
+import { LogTokens } from './token';
+import { parseFail } from './failure';
+import { parseBool, parseNumber, parseString, parseUndefined } from './parser/scalars';
+import { parseArray, parseNull, parseObject } from './parser/object';
+import { parseMessage, parseComposition } from './parser/message';
+import { parseError } from './parser/error';
 
 
 export interface TypeMap {
@@ -27,8 +27,24 @@ export interface TypeMap {
 	readonly [ loggable_type.message] : string;
 }
 
-export type parse<P extends loggable_type, T = TypeMap[P]> = (loggable:T, context:LogContext) => LogTokens;
-export type Parsers = { [P in loggable_type]? : parse<P> };
+export type parse<P extends loggable_type, T = TypeMap[P]> = (loggable:T, context:ParseContext) => LogTokens;
+export type Parsers = { [ P in loggable_type ]? : parse<P> };
+
+
+type selectParser = (type:loggable_type) => parse<loggable_type>;
+type parseInferred = (data:LoggableData, context:LogContext) => LogTokens;
+type parseUnknown = (loggable:unknown) => LogTokens;
+
+export interface ParseHost {
+	readonly inferType : inferType;
+	readonly selectParser : selectParser;
+	readonly parse : parseInferred;
+}
+
+export interface ParseContext {
+	readonly context : LogContext;
+	readonly inferAndParse : parseUnknown;
+}
 
 
 export const parsers:Parsers = {
@@ -43,6 +59,35 @@ export const parsers:Parsers = {
 	[ loggable_type.message ] : parseMessage,
 	[ loggable_type.composition ] : parseComposition
 };
+
+
+export function createParseHost(
+	infer:inferType,
+	select:selectParser
+) : ParseHost {
+	return {
+		inferType : infer,
+		selectParser : select,
+		parse(data, context) {
+			const parseContext = createParseContext(this, context);
+			const parse = select(data.type);
+
+			return parse(data.value, parseContext);
+		}
+	}
+}
+
+export function createParseContext(host:ParseHost, context:LogContext) : ParseContext {
+	return {
+		context,
+		inferAndParse(loggable) {
+			const type = host.inferType(loggable);
+			const parse = host.selectParser(type);
+
+			return parse(loggable, this);
+		}
+	}
+}
 
 
 export function getParser<P extends loggable_type>(parserCollection:Parsers, type:P) : parse<P> {

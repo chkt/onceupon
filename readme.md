@@ -69,7 +69,7 @@ const enum log_level {
   debug
 }
 
-export interface LoggerConfig {
+interface LoggerConfig {
   readonly threshold : log_level;
   readonly tags : string;
   readonly infer : inferType;
@@ -84,6 +84,8 @@ interface Logger {
   message(message:string|Composition, level?:log_level, tags?:string) : Logger;
   value(value:any, level?:log_level, tags?:string) : Logger;
   failure(reason:any, level?:log_level, tags?:string) : Logger;
+  create(value:any, opts:ParseOptions) : Promise<Log>;
+  submit(data:Log) : Logger;
   threshold(threshold:log_level) : Logger;
   settings(settings:Partial<LoggerConfig>) : Logger;
   settle() : Promise<void>;

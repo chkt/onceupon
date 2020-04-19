@@ -1,12 +1,11 @@
 import WritableStream = NodeJS.WritableStream;
 
-import { log_level } from "./level";
-import { Log } from "./context";
-import { AggregatedContext } from "./aggregate";
-import { tokensToString } from "./format";
+import { log_level } from './level';
+import { Log } from './context';
+import { tokensToString } from './format';
 
 
-export type handleLog = (data:Log<AggregatedContext>) => Promise<void>;
+export type handleLog = (data:Log) => Promise<void>;
 
 type Streams = { [P in log_level] : WritableStream };
 
@@ -16,7 +15,7 @@ function sendMsgToConsole(fn:(msg:string) => any, msg:string) : Promise<void> {
 }
 
 
-export function consoleHandler(data:Log<AggregatedContext>) : Promise<void> {
+export function consoleHandler(data:Log) : Promise<void> {
 	const msg = tokensToString(data.tokens);
 
 	switch (data.context.level) {

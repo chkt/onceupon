@@ -1,14 +1,13 @@
-import { createSequencer, Sequencer } from "@chkt/continuity/dist";
-import { log_level } from "./level";
-import { extendTags } from "./tags";
-import { getType, inferType } from "./type";
-import { getTime, nowToUtcIso } from "./time";
-import { createLog, createLogContext, Log, LogContext, LoggableData } from "./context";
-import { LogTokens } from "./token";
-import { getParser, parsers, Parsers } from "./parse";
-import { AggregatedContext, Aggregator, createAggregator, createNoopAggregator } from "./aggregate";
-import { decorateTimeLevelLog, decorateTokens } from "./decorate";
-import { consoleHandler, handleLog } from "./handler";
+import { createSequencer, Sequencer } from '@chkt/continuity';
+import { log_level } from './level';
+import { extendTags } from './tags';
+import { getTime, nowToUtcIso } from './time';
+import { getType, inferType } from './type';
+import { createLog, createLogContext, Log, LoggableData } from './context';
+import { createParseHost, getParser, ParseHost, parsers, Parsers } from './parse';
+import { Aggregator, createAggregator, createNoopAggregator } from './aggregate';
+import { decorateTimeLevelLog, decorateTokens } from './decorate';
+import { consoleHandler, handleLog } from './handler';
 
 
 export interface LoggerConfig {
@@ -24,6 +23,7 @@ export interface LoggerConfig {
 
 type asyncTrigger = () => Promise<void>;
 type enqueue = (fn:asyncTrigger) => void;
+type parseAndHandle = (this:LoggerHost, data:LoggableData) => void;
 
 export interface LoggerHost {
 	readonly config : LoggerConfig;
@@ -31,7 +31,7 @@ export interface LoggerHost {
 	readonly sequence : Sequencer;
 	readonly queue : enqueue;
 	readonly aggregate : Aggregator;
-	readonly parse : parse;
+	readonly parser : ParseHost;
 	readonly parseAndHandle : parseAndHandle;
 }
 
@@ -45,31 +45,21 @@ function createQueueHandler() : (fn:asyncTrigger) => void {
 }
 
 
-export type parse = (loggable:any, context:LogContext) => LogTokens;
-export type parseAndHandle = (this:LoggerHost, data:LoggableData) => void;
-
-function parse(this:LoggerHost, loggable:any, context:LogContext) : LogTokens {
-	const type = this.config.infer(loggable);
-	const parser = getParser(this.config.parsers, type);
-
-	return parser(loggable, context);
-}
-
 function parseAndHandle(this:LoggerHost, data:LoggableData) : void {
 	const id = this.sequence.register();
 
 	createLogContext(this, data)
 		.then(context => {
 			this.sequence.schedule(id, () => {
-				const parser = getParser(this.config.parsers, data.type);
-				const tokens = parser(data.value, context);
+				const tokens = this.parser.parse(data, context);
 
 				this.aggregate.append(createLog(tokens, context));
 			});
 		});
 }
 
-function onAggregated(queue:enqueue, config:LoggerConfig, data:Log<AggregatedContext>) : void {
+
+function onAggregated(queue:enqueue, config:LoggerConfig, data:Log) : void {
 	queue(() => {
 		const tokens = config.decorate(data);
 
@@ -101,7 +91,10 @@ export function createHost(config:Partial<LoggerConfig>, base:LoggerConfig) : Lo
 		sequence : createSequencer(),
 		queue,
 		aggregate : settings.aggregate(onAggregated.bind(null, queue, settings)),
-		parse,
+		parser : createParseHost(
+			settings.infer,
+			type => getParser(settings.parsers, type)
+		),
 		parseAndHandle
 	};
 }
@@ -113,6 +106,10 @@ export function updateHost(config:Partial<LoggerConfig>, host:LoggerHost) : Logg
 		...host,
 		config : settings,
 		baseTags : extendTags([], settings.tags),
-		aggregate : settings.aggregate(onAggregated.bind(null, host.queue, settings))
+		aggregate : settings.aggregate(onAggregated.bind(null, host.queue, settings)),
+		parser : createParseHost(
+			settings.infer,
+			type => getParser(settings.parsers, type)
+		)
 	};
 }

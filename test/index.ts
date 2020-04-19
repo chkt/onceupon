@@ -2,14 +2,15 @@ import * as assert from 'assert';
 import { describe, it } from 'mocha';
 
 import { Writable } from 'stream';
-import { loggable_type } from "../source/type";
-import { compose } from "../source/compose";
-import { Log, LogContext } from "../source/context";
-import { createToken, LogTokens, token_type } from "../source/token";
-import { AggregatedContext, createTLAggregator } from "../source/aggregate";
-import { decorateNothing, decorateTimeCountLevelLog } from "../source/decorate";
+import { loggable_type } from '../source/type';
+import { compose } from '../source/compose';
+import { Log } from '../source/context';
+import { createToken, LogTokens, token_type } from '../source/token';
+import { ParseContext } from '../source/parse';
+import { createTLAggregator } from '../source/aggregate';
+import { decorateNothing, decorateTimeCountLevelLog } from '../source/decorate';
 import * as formater from '../source/format';
-import { createOutErrHandler } from "../source/handler";
+import { createOutErrHandler } from '../source/handler';
 import { createLogger, log_level } from '../source';
 
 
@@ -72,7 +73,7 @@ function tokensToString(tokens:LogTokens) : string {
 	return res.substring(0, res.length - 1);
 }
 
-async function handle(this:string[], transform:tokensToString, data:Log<AggregatedContext>) : Promise<void> {
+async function handle(this:string[], transform:tokensToString, data:Log) : Promise<void> {
 	this.push(transform(data.tokens));
 }
 
@@ -82,6 +83,10 @@ describe('onceupon', () => {
 		const log = createLogger();
 
 		assert(typeof log === 'object');
+		assert('create' in log);
+		assert.strictEqual(typeof log.create, 'function');
+		assert('submit' in log);
+		assert.strictEqual(typeof log.submit, 'function');
 		assert('message' in log);
 		assert(typeof log.message === 'function');
 		assert('value' in log);
@@ -111,6 +116,39 @@ describe('onceupon', () => {
 		assert.strictEqual(msg, '1 notice  foo');
 	});
 
+	it('should parse a value into a Log', async () => {
+		const log = createLogger({
+			time : getIncrement()
+		});
+
+		assert.deepStrictEqual(await log.create('foo'), {
+			tokens : [ createToken(token_type.scalar_string, 'foo') ],
+			context : {
+				count: 1,
+				from: '1',
+				to: '1',
+				level: log_level.notice,
+				tags: [],
+				type : loggable_type.string
+			}
+		});
+		assert.deepStrictEqual(await log.create('foo', {
+			level : log_level.warn,
+			tags : 'foo bar',
+			stringAsMessage : true
+		}), {
+			tokens : [ createToken(token_type.message_fragment, 'foo') ],
+			context : {
+				count : 1,
+				from : '2',
+				to : '2',
+				level : log_level.warn,
+				tags : ['foo', 'bar'],
+				type : loggable_type.message
+			}
+		});
+	});
+
 	it('should allow arbitrary handlers', async () => {
 		const msg:string[] = [];
 		const log = createLogger({
@@ -127,6 +165,24 @@ describe('onceupon', () => {
 		]);
 	});
 
+	it('should allow submission of external logs', async () => {
+		const msg:string[] = [];
+		const log = createLogger({
+			time : getIncrement(),
+			handle : handle.bind(msg, tokensToString)
+		});
+
+		const item = await log.create('foo');
+
+		await log
+			.submit(item)
+			.settle();
+
+		assert.deepStrictEqual(msg, [
+			'1 notice foo'
+		]);
+	});
+
 	it ('should allow arbitrary parsers', async () => {
 		const msg:string[] = [];
 		const log = createLogger({
@@ -134,7 +190,7 @@ describe('onceupon', () => {
 			parsers : {
 				[ loggable_type.string ] : message => [ createToken(token_type.message_fragment, message) ]
 			},
-			handle : async (data:Log<AggregatedContext>) => {
+			handle : async (data:Log) => {
 				msg.push(tokensToString(data.tokens));
 			}
 		});
@@ -248,8 +304,8 @@ describe('onceupon', () => {
 		const log = createLogger({
 			handle : handle.bind(msg, tokensToString),
 			parsers : {
-				[ loggable_type.any] : (loggable:any, context:LogContext) : LogTokens => [
-					createToken(token_type.message_fragment, context.type)
+				[ loggable_type.any ] : (loggable:unknown, context:ParseContext) : LogTokens => [
+					createToken(token_type.message_fragment, context.context.type)
 				]
 			},
 			decorate : decorateNothing
@@ -283,8 +339,8 @@ describe('onceupon', () => {
 		const log = createLogger({
 			handle : handle.bind(msg, tokensToString),
 			parsers : {
-				[ loggable_type.any ] : (loggable:any, context:LogContext) : LogTokens => [
-					createToken(token_type.message_fragment, context.type)
+				[ loggable_type.any ] : (loggable:any, context:ParseContext) : LogTokens => [
+					createToken(token_type.message_fragment, context.context.type)
 				]
 			},
 			decorate : decorateNothing

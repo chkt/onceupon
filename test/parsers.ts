@@ -1,10 +1,9 @@
 import * as assert from 'assert';
 import { describe, it } from 'mocha';
 
-import { compose } from "../source/compose";
-import { Log } from "../source/context";
-import { AggregatedContext } from "../source/aggregate";
-import { tokensToString } from "../source/format";
+import { compose } from '../source/compose';
+import { Log } from '../source/context';
+import { tokensToString } from '../source/format';
 import { createLogger } from '../source/logger';
 
 
@@ -14,7 +13,7 @@ function getIncrement() {
 	return () => Promise.resolve(String(++i));
 }
 
-async function handle(this:string[], data:Log<AggregatedContext>) : Promise<void> {
+async function handle(this:string[], data:Log) : Promise<void> {
 	this.push(tokensToString(data.tokens));
 }
 

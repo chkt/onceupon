@@ -1,4 +1,4 @@
-import { Composition } from "./compose";
+import { Composition } from './compose';
 
 
 export const enum loggable_type {
@@ -19,7 +19,7 @@ export const enum loggable_type {
 	composition = 'cmp'
 }
 
-export type inferType = (loggable:any) => loggable_type;
+export type inferType = (loggable:unknown) => loggable_type;
 
 
 const primitiveType:ReadonlyMap<string, loggable_type> = new Map([
@@ -40,7 +40,7 @@ function getPrimitiveType(tag:string) : loggable_type {
 }
 
 
-export function getType(loggable:any) : loggable_type {
+export function getType(loggable:unknown) : loggable_type {
 	const type = typeof loggable;
 
 	if (type !== 'object') return getPrimitiveType(type);
