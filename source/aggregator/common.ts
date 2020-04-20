@@ -23,7 +23,7 @@ export function createTimer(fn:trigger, delay:number) : Timer {
 			return expired;
 		},
 		reset(next?:trigger) {
-			if (!expired) clearInterval(id);
+			if (!expired) clearTimeout(id);
 
 			expired = true;
 
@@ -32,7 +32,7 @@ export function createTimer(fn:trigger, delay:number) : Timer {
 		trip() {
 			if (expired) return;
 
-			clearInterval(id);
+			clearTimeout(id);
 			fn();
 
 			expired = true;
@@ -40,7 +40,7 @@ export function createTimer(fn:trigger, delay:number) : Timer {
 		kill() {
 			if (expired) return;
 
-			clearInterval(id);
+			clearTimeout(id);
 
 			expired = true;
 		}
