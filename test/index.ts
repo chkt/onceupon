@@ -7,7 +7,7 @@ import { compose } from '../source/compose';
 import { Log } from '../source/context';
 import { createToken, LogTokens, token_type } from '../source/token';
 import { ParseContext } from '../source/parse';
-import { createTLAggregator } from '../source/aggregate';
+import { createTLAggregator } from '../source/aggregator/timeLevel';
 import { decorateNothing, decorateTimeCountLevelLog } from '../source/decorate';
 import * as formater from '../source/format';
 import { createOutErrHandler } from '../source/handler';
@@ -468,7 +468,7 @@ describe('onceupon', () => {
 		const log = createLogger({
 			threshold : log_level.info,
 			time : getIncrement(),
-			aggregate : createTLAggregator,
+			aggregate : createTLAggregator(),
 			decorate : decorateTimeCountLevelLog,
 			handle : handle.bind(msg, formater.tokensToString)
 		});
@@ -487,6 +487,36 @@ describe('onceupon', () => {
 			'4    2|info    foo',
 			'5    1|info    bar',
 			'6    1|notice  bar'
+		]);
+	});
+
+	it('should flush timed out aggregated messages using an aggregator', async () => {
+		async function delay(ms:number) : Promise<void> {
+			return new Promise(resolve => setTimeout(resolve, ms));
+		}
+
+		const msg:string[] = [];
+		const log = createLogger({
+			time : getIncrement(),
+			aggregate : createTLAggregator({ maxDelay : 100 }),
+			decorate : decorateTimeCountLevelLog,
+			handle : handle.bind(msg, formater.tokensToString)
+		});
+
+		log.message('foo');
+
+		await delay(60);
+
+		log.message('foo');
+
+		await delay(60);
+
+		assert.deepStrictEqual(msg, []);
+
+		await delay(60);
+
+		assert.deepStrictEqual(msg, [
+			'2    2|notice  foo'
 		]);
 	});
 });

@@ -5,9 +5,10 @@ import { getTime, nowToUtcIso } from './time';
 import { getType, inferType } from './type';
 import { createLog, createLogContext, Log, LoggableData } from './context';
 import { createParseHost, getParser, ParseHost, parsers, Parsers } from './parse';
-import { Aggregator, createAggregator, createNoopAggregator } from './aggregate';
+import { Aggregator, attachEmitter } from './aggregate';
 import { decorateTimeLevelLog, decorateTokens } from './decorate';
 import { consoleHandler, handleLog } from './handler';
+import { createNoopAggregator } from "./aggregator/noop";
 
 
 export interface LoggerConfig {
@@ -17,7 +18,7 @@ export interface LoggerConfig {
 	readonly parsers : Parsers;
 	readonly decorate : decorateTokens;
 	readonly time : getTime;
-	readonly aggregate : createAggregator;
+	readonly aggregate : attachEmitter;
 	readonly handle : handleLog;
 }
 
@@ -76,7 +77,7 @@ export function getDefaultConfig() : LoggerConfig {
 		parsers,
 		decorate : decorateTimeLevelLog,
 		time : nowToUtcIso,
-		aggregate : createNoopAggregator,
+		aggregate : createNoopAggregator(),
 		handle : consoleHandler,
 	};
 }

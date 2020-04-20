@@ -41,7 +41,7 @@ import { createLogger, log_level } from '@chkt/onceupon';
 import { getTime} from "@chkt/onceupon/dist/time";
 import { inferType } from "@chkt/onceupon/dist/type";
 import { Parsers } from "@chkt/onceupon/dist/parse";
-import { createAggregator } from "@chkt/onceupon/dist/aggregate";
+import { attachEmitter } from "@chkt/onceupon/dist/aggregate";
 import { decorateTokens } from "@chkt/onceupon/dist/decorate";
 import { handleLog } from "@chkt/onceupon/dist/handler";
 
@@ -51,7 +51,7 @@ const logger = createLogger({
   time : getTime,
   infer : inferType,
   parsers : Parsers,
-  aggregate : createAggregator,
+  aggregate : attachEmitter,
   decorate : decorateTokens,
   handle : handleLog
 });
@@ -75,7 +75,7 @@ interface LoggerConfig {
   readonly infer : inferType;
   readonly parsers : Parsers;
   readonly time : getTime;
-  readonly aggregate : createAggregator;
+  readonly aggregate : attachEmitter;
   readonly decorate : decorateTokens;
   readonly handle : handleLog;
 }

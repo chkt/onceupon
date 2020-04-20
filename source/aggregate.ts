@@ -1,105 +1,21 @@
-import { createLog, Log, LogContext } from './context';
-import { isTokensEqual } from './token';
+import { Log, LogContext } from './context';
 
 
-type trigger = () => void;
-type processLog = (data:Log) => void;
-
-interface TimerContext {
-	readonly id : NodeJS.Timer;
-	readonly delay : number;
-	readonly fn : trigger;
-}
+export type trigger = () => void;
+export type processLog = (data:Log) => void;
 
 export interface Aggregator {
 	readonly append : processLog;
 	readonly flush : trigger;
 }
 
-export type createAggregator = (emit:processLog) => Aggregator;
+export type attachEmitter = (emit:processLog) => Aggregator;
 
 
-function updateContext(base:LogContext, supplement:LogContext) {
+export function updateContext(base:LogContext, supplement:LogContext) {
 	return {
 		...supplement,
 		from : base.from,
 		count : base.count + supplement.count
 	};
-}
-
-
-function createTimer(fn:trigger, delay:number) : TimerContext {
-	return {
-		id : setTimeout(fn, delay),
-		delay,
-		fn
-	};
-}
-
-function resetTimer(context:TimerContext, fn?:trigger) : TimerContext {
-	if (context.id !== null) clearTimeout(context.id);
-
-	const cb = fn ?? context.fn;
-	const id = setTimeout(cb, context.delay);
-
-	return {
-		id,
-		delay : context.delay,
-		fn : cb
-	};
-}
-
-function tripTimer(context:TimerContext) : void {
-	if (context.id !== null) clearTimeout(context.id);
-
-	context.fn();
-}
-
-
-export function createNoopAggregator(emit:processLog) : Aggregator {
-	return {
-		append : data => emit(data),
-		flush : () => undefined
-	};
-}
-
-export function createTLAggregator(emit:processLog, maxDelay:number = 100) : Aggregator {
-	let prev:Log;
-	let timer:TimerContext|null = null;
-
-	return {
-		append: data => {
-			if (timer !== null && (!isTokensEqual(data.tokens, prev.tokens) || data.context.level !== prev.context.level)) {
-				tripTimer(timer);
-				timer = null;
-			}
-
-			let next:Log;
-
-			if (timer === null) {
-				next = data;
-
-				timer = createTimer(() => {
-					emit(next);
-					timer = null;
-				}, maxDelay);
-			}
-			else {
-				next = createLog(data.tokens, updateContext(prev.context, data.context));
-
-				timer = resetTimer(timer, () => {
-					emit(next);
-					timer = null;
-				});
-			}
-
-			prev = next;
-		},
-		flush : () => {
-			if (timer !== null) {
-				tripTimer(timer);
-				timer = null;
-			}
-		}
-	}
 }
