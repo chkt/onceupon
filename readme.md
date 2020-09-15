@@ -27,9 +27,9 @@ const logger = createLogger();
 
 async () => {
   await logger
-    .log('foo')
-    .log([1, 2, 3], log_level.warn)
-    .log(new Error(), log_level.error, 'reporting api')
+    .message('foo')
+    .value([1, 2, 3], log_level.warn)
+    .failure(new Error(), log_level.error, 'reporting api')
     .settle();
 }
 ```
