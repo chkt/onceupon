@@ -43,6 +43,7 @@ export interface ParseHost {
 
 export interface ParseContext {
 	readonly context : LogContext;
+	readonly references : ReadonlyArray<unknown>;
 	readonly inferAndParse : parseUnknown;
 }
 
@@ -80,6 +81,7 @@ export function createParseHost(
 export function createParseContext(host:ParseHost, context:LogContext) : ParseContext {
 	return {
 		context,
+		references : [],
 		inferAndParse(loggable) {
 			const type = host.inferType(loggable);
 			const parse = host.selectParser(type);

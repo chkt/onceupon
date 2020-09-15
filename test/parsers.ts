@@ -147,6 +147,25 @@ describe('onceupon', () => {
 		]);
 	});
 
+	it('should detect reference loops in objects', async () => {
+		const msg:string[] = [];
+		const log = createLogger({
+			time : getIncrement(),
+			handle : handle.bind(msg)
+		});
+
+		const o2 = { bar : {} };
+		const o1 = { foo : o2 };
+
+		o2.bar = o1;
+
+		await log.value(o1).settle();
+
+		assert.deepStrictEqual(msg, [
+			'1 notice  {\n\tfoo : {\n\t\tbar : &1\n\t}\n}'
+		]);
+	});
+
 	it('should log v8 errors', async () => {
 		const msg:string[] = [];
 		const log = createLogger({
@@ -331,6 +350,26 @@ describe('onceupon', () => {
 
 		assert.deepStrictEqual(msg, [
 			'1 notice  [\n\ttrue,\n\t1,\n\t\'foo\'\n]'
+		]);
+	});
+
+	it('should detect reference loops in arrays', async () => {
+		const msg:string[] = [];
+		const log = createLogger({
+			time : getIncrement(),
+			handle : handle.bind(msg)
+		});
+
+		const a0:unknown[] = [];
+		const a1:unknown[] = [ a0 ];
+		a0.push(a1);
+
+		await log
+			.value(a0)
+			.settle();
+
+		assert.deepStrictEqual(msg, [
+			'1 notice  [\n\t[\n\t\t&1\n\t]\n]'
 		]);
 	});
 

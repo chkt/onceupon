@@ -14,6 +14,7 @@ export const enum token_type {
 	object,
 	object_null,
 	object_array,
+	object_reference,
 	property_name,
 	error_name,
 	error_message,

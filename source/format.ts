@@ -92,12 +92,17 @@ function transformString(token:LogToken) : LogToken {
 	return createToken(token.type, s);
 }
 
+function transformReference(token:LogToken) : LogToken {
+	return createToken(token.type, `&${ token.content }`);
+}
+
 
 export function tokensToString(tokens:LogTokens, depth:number = 0) : string {
 	const transforms:Transforms = {
 		[ token_type.level ] : transformLevel,
 		[ token_type.count ] : transformCount,
 		[ token_type.scalar_string ] : transformString,
+		[ token_type.object_reference ] : transformReference,
 		[ token_type.error_message ] : transformString
 	};
 
