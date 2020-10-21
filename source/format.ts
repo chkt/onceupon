@@ -6,7 +6,7 @@ import { transformFail } from "./failure";
 type transformToken = (token:LogToken) => LogToken;
 
 interface Transforms {
-	readonly [ key:string] : transformToken;
+	readonly [ key:string ] : transformToken;
 }
 
 
@@ -31,6 +31,23 @@ function getSpacing(depth:number) {
 
 export function formatLevel(level:string) : string {
 	return level.padEnd(7);
+}
+
+function formatBytes(tokens:LogTokens, depth:number) {
+	const places = tokens.length.toString(16).length;
+	let res = '';
+
+	for (let i = 0, l = tokens.length; i < l; i += 1) {
+		const mod = i % 16;
+
+		if (mod === 0) res += `${ getSpacing(depth) }${ i.toString(16).padStart(places, '0') }  `;
+		else if (mod === 8) res += '-';
+		else res += ' ';
+
+		res += tokens[i].content;
+	}
+
+	return res;
 }
 
 export function formatCount(count:string) : string {
@@ -119,6 +136,7 @@ export function tokensToString(tokens:LogTokens, depth:number = 0) : string {
 		if (isScopeToken(token)) {
 			if (nextType === token_type.object) message += `{${ tokensToString(token.children, depth + 1) }${ getSpacing(depth) }}`;
 			else if (nextType === token_type.object_array) message += `[${ tokensToString(token.children, depth + 1) }${ getSpacing(depth) }]`;
+			else if (nextType === token_type.object_bytes) message += `<${ formatBytes(token.children, depth + 1) }${ getSpacing(depth) }>`;
 			else message += tokensToString(token.children);
 		}
 		else message += token.content;

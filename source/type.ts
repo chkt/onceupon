@@ -13,6 +13,7 @@ export const enum loggable_type {
 	symbol = 'sym',
 	function = 'fn',
 	array = 'arr',
+	bytes = 'byte',
 	object = 'obj',
 	error = 'err',
 	message = 'msg',
@@ -47,6 +48,7 @@ export function getType(loggable:unknown) : loggable_type {
 	else if (loggable === null) return loggable_type.null;
 	else if (loggable instanceof Error) return loggable_type.error;
 	else if (Array.isArray(loggable)) return loggable_type.array;
+	else if (loggable instanceof Uint8Array) return loggable_type.bytes;
 	else if (loggable instanceof Composition) return loggable_type.composition;
 	else return loggable_type.object;
 }

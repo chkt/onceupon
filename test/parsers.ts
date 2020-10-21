@@ -373,6 +373,29 @@ describe('onceupon', () => {
 		]);
 	});
 
+	it('should log Uint8Arrays', async () => {
+		const msg:string[] = [];
+		const log = createLogger({
+			time : getIncrement(),
+			handle : handle.bind(msg)
+		});
+
+		const data = [
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+			240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255
+		];
+
+		await log
+			.value(Buffer.from(data))
+			.value(Uint8Array.of(...data))
+			.settle()
+
+		assert.deepStrictEqual(msg, [
+			'1 notice  Buffer <\n\t00  00 01 02 03 04 05 06 07-08 09 0a 0b 0c 0d 0e 0f\n\t10  f0 f1 f2 f3 f4 f5 f6 f7-f8 f9 fa fb fc fd fe ff\n>',
+			'2 notice  Uint8Array <\n\t00  00 01 02 03 04 05 06 07-08 09 0a 0b 0c 0d 0e 0f\n\t10  f0 f1 f2 f3 f4 f5 f6 f7-f8 f9 fa fb fc fd fe ff\n>',
+		]);
+	});
+
 	it('should log compositions', async () => {
 		const msg:string[] = [];
 		const log = createLogger({

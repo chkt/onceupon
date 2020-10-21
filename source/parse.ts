@@ -4,6 +4,7 @@ import { LogContext, LoggableData } from './context';
 import { LogTokens } from './token';
 import { parseFail } from './failure';
 import { parseBool, parseNumber, parseString, parseUndefined } from './parser/scalars';
+import { parseBytes } from './parser/buffer';
 import { parseArray, parseNull, parseObject } from './parser/object';
 import { parseMessage, parseComposition } from './parser/message';
 import { parseError } from './parser/error';
@@ -22,6 +23,7 @@ export interface TypeMap {
 	readonly [ loggable_type.function ] : (...args:any[]) => any;
 	readonly [ loggable_type.error ] : Error;
 	readonly [ loggable_type.array ] : any[];
+	readonly [ loggable_type.bytes ] : Uint8Array;
 	readonly [ loggable_type.object ] : object;
 	readonly [ loggable_type.composition ] : Composition;
 	readonly [ loggable_type.message] : string;
@@ -56,6 +58,7 @@ export const parsers:Parsers = {
 	[ loggable_type.string ] : parseString,
 	[ loggable_type.object ] : parseObject,
 	[ loggable_type.array ] : parseArray,
+	[ loggable_type.bytes ] : parseBytes,
 	[ loggable_type.error ] : parseError,
 	[ loggable_type.message ] : parseMessage,
 	[ loggable_type.composition ] : parseComposition
