@@ -1,5 +1,5 @@
-import { createToken, LogTokens, token_type } from "../token";
-import { stackFail } from "../failure";
+import { createToken, LogTokens, token_type } from '../token';
+import { stackFail } from '../failure';
 
 
 const stackParserSpiderMonkey = /^\s*([^@]*)@(.+):(\d+):(\d+)\s*$/;
@@ -25,7 +25,7 @@ const enum jscore_match_location {
 }
 
 
-const stackParserV8 = /^\s*(?:([A-Za-z_$][A-Za-z0-9_$]*)(?:: (.+))?|at (?:[^. ]+\.|new )?([^ ]+) (?:\[as [^\]]+] )?\((?:(native|unknown location)|eval (.*)|(.+):(\d+):(\d+))\))\s*$/;
+const stackParserV8 = /^\s*(?:([A-Za-z_$][A-Za-z0-9_$]*)(?:: (.+))?|at (?:[^. ]+\.|new )?([^ ]+) (?:\[as [^\]]+] )?\((?:(native|unknown location)|eval (.*)|(.+):(\d+):(\d+))\)|at (.+):(\d+):(\d+))\s*$/;
 
 const enum v8_match_location {
 	frame = 0,
@@ -36,7 +36,10 @@ const enum v8_match_location {
 	eval = 5,
 	file = 6,
 	line = 7,
-	col = 8
+	col = 8,
+	naked_file,
+	naked_line,
+	naked_col
 }
 
 
@@ -141,6 +144,14 @@ function createStackInfoV8(match:RegExpMatchArray) : StackInfo {
 		return {
 			name : match[v8_match_location.error],
 			...match[v8_match_location.message] !== undefined ? { message : match[v8_match_location.message ] } : {}
+		};
+	}
+	else if (match[v8_match_location.naked_file] !== undefined) {
+		return {
+			name : '',
+			file : match[v8_match_location.naked_file],
+			line : match[v8_match_location.naked_line],
+			col : match[v8_match_location.naked_col]
 		};
 	}
 	else throw createTraceError('v8 weird line', match[v8_match_location.frame]);
