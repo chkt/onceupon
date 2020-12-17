@@ -43,11 +43,15 @@ export function createTokens(type:token_type, contents:ReadonlyArray<string>) {
 	return contents.map(content => ({ type, content }));
 }
 
+export function isTokenEqual(a:LogToken, b:LogToken) : boolean {
+	return a.type === b.type && a.content === b.content;
+}
+
 export function isTokensEqual(a:LogTokens, b:LogTokens) : boolean {
 	if (a.length !== b.length) return false;
 
 	for (let i = 0, l = a.length; i < l; i += 1) {
-		if (a[i].type !== b[i].type || a[i].content !== b[i].content) return false;
+		if (!isTokenEqual(a[i], b[i])) return false;
 	}
 
 	return true;
