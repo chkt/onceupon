@@ -191,7 +191,8 @@ describe('onceupon', () => {
 			.value(new V8Error('fox', 'V8Error: fox\n    at <anonymous> (unknown location)'))
 			.value(new V8Error('bax', 'V8Error: bax\n    at SomeClass.method (eval at SomeClass.other (eval at <anonymous> (/path/to/file:42:23)))'))
 			.value(new V8Error('quz', '$ome_error: bang\n    at fn (/path/to/file:42:23)'))
-			.value(new V8Error('foz', 'V8Error: foz\n   at fn (http://domain.tld/path/to/file:23:42)'))
+			.value(new V8Error('foz', 'V8Error: foz\n    at fn (http://domain.tld/path/to/file:23:42)'))
+			.value(new V8Error('foy', 'V8Error: foy\n    at /path/to/file:1:2'))
 			.settle();
 
 		assert.deepStrictEqual(msg, [
@@ -202,7 +203,8 @@ describe('onceupon', () => {
 			'5 notice  Error:V8Error \'fox\' @unknown location ?:?',
 			'6 notice  Error:V8Error \'bax\' @/path/to/file 42:23',
 			'7 notice  Error:V8Error \'quz\' @/path/to/file 42:23',
-			'8 notice  Error:V8Error \'foz\' @http://domain.tld/path/to/file 23:42'
+			'8 notice  Error:V8Error \'foz\' @http://domain.tld/path/to/file 23:42',
+			'9 notice  Error:V8Error \'foy\' @/path/to/file 1:2'
 		]);
 	});
 
