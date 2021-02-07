@@ -18,6 +18,8 @@ export const enum token_type {
 	object_array,
 	object_bytes,
 	object_reference,
+	object_unresolved,
+	property_inherited,
 	property_name,
 	error_name,
 	error_message,
