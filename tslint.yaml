@@ -34,9 +34,7 @@ rules:
       underscore : true
   no-submodule-imports: false
   object-literal-sort-keys:
-    - true
-    - ignore-blank-lines
-    - match-declaration-order-only
+    - false
   one-line:
     - true
     - check-open-brace
