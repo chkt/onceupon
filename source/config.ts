@@ -4,14 +4,14 @@ import { extendTags } from './tags';
 import { getTime, nowToUtcIso } from './time';
 import { getType, inferType } from './type';
 import { createLog, createLogContext, Log, LoggableData } from './context';
-import { createParseHost, getParser, ParseHost, parsers, Parsers } from './parse';
+import { createParseConfig, createParseHost, getParser, ParseConfig, ParseHost, parsers, Parsers } from './parse';
 import { Aggregator, attachEmitter } from './aggregate';
+import { createNoopAggregator } from './aggregator/noop';
 import { decorateTimeLevelLog, decorateTokens } from './decorate';
 import { consoleHandler, handleLog } from './handler';
-import { createNoopAggregator } from "./aggregator/noop";
 
 
-export interface LoggerConfig {
+export interface LoggerConfig extends ParseConfig {
 	readonly threshold : log_level;
 	readonly tags : string;
 	readonly infer : inferType;
@@ -73,6 +73,7 @@ export function getDefaultConfig() : LoggerConfig {
 	return {
 		threshold : log_level.notice,
 		tags : '',
+		maxDepth : Number.MAX_SAFE_INTEGER,
 		infer : getType,
 		parsers,
 		decorate : decorateTimeLevelLog,
@@ -93,6 +94,7 @@ export function createHost(config:Partial<LoggerConfig>, base:LoggerConfig) : Lo
 		queue,
 		aggregate : settings.aggregate(onAggregated.bind(null, queue, settings)),
 		parser : createParseHost(
+			createParseConfig(settings),
 			settings.infer,
 			type => getParser(settings.parsers, type)
 		),
@@ -109,6 +111,7 @@ export function updateHost(config:Partial<LoggerConfig>, host:LoggerHost) : Logg
 		baseTags : extendTags([], settings.tags),
 		aggregate : settings.aggregate(onAggregated.bind(null, host.queue, settings)),
 		parser : createParseHost(
+			createParseConfig(settings),
 			settings.infer,
 			type => getParser(settings.parsers, type)
 		)
