@@ -147,6 +147,47 @@ describe('onceupon', () => {
 		]);
 	});
 
+	it('should resolve object prototypes', async () => {
+		const msg:string[] = [];
+		const log = createLogger({
+			maxDepth : 2,
+			time : getIncrement(),
+			handle : handle.bind(msg)
+		});
+
+		const p2 = { foo : 2, baz : 2 };
+		const p1 = Object.create(p2);
+		p1.foo = 1;
+		p1.bar = 1;
+		const o = Object.create(p1);
+		o.foo = 0;
+
+		await log
+			.value(o)
+			.settle();
+
+		assert.deepStrictEqual(msg, [
+			'1 notice  {\n\tfoo : 0,\n\t^1 bar : 1,\n\t^…\n}'
+		]);
+	});
+
+	it('should resolve objects to specified depth', async () => {
+		const msg:string[] = [];
+		const log = createLogger({
+			maxDepth : 2,
+			time : getIncrement(),
+			handle : handle.bind(msg)
+		});
+
+		await log
+			.value({ foo : { bar : { baz : 'qux' }}})
+			.settle();
+
+		assert.deepStrictEqual(msg, [
+			'1 notice  {\n\tfoo : {\n\t\tbar : {\n\t\t\t…\n\t\t}\n\t}\n}'
+		]);
+	});
+
 	it('should detect reference loops in objects', async () => {
 		const msg:string[] = [];
 		const log = createLogger({
@@ -355,6 +396,23 @@ describe('onceupon', () => {
 		]);
 	});
 
+	it('should resolve arrays to specified depth', async () => {
+		const msg:string[] = [];
+		const log = createLogger({
+			maxDepth : 2,
+			time : getIncrement(),
+			handle : handle.bind(msg)
+		});
+
+		await log
+			.value([[[ 'foo' ]]])
+			.settle();
+
+		assert.deepStrictEqual(msg, [
+			'1 notice  [\n\t[\n\t\t[\n\t\t\t…\n\t\t]\n\t]\n]'
+		]);
+	});
+
 	it('should detect reference loops in arrays', async () => {
 		const msg:string[] = [];
 		const log = createLogger({
@@ -372,6 +430,25 @@ describe('onceupon', () => {
 
 		assert.deepStrictEqual(msg, [
 			'1 notice  [\n\t[\n\t\t&1\n\t]\n]'
+		]);
+	});
+
+	it('should resolve object/array combinations to specified depth', async () => {
+		const msg:string[] = [];
+		const log = createLogger({
+			maxDepth : 2,
+			time : getIncrement(),
+			handle : handle.bind(msg)
+		});
+
+		await log
+			.value({ foo : { bar : []}})
+			.value([[{ foo : 'bar' }]])
+			.settle();
+
+		assert.deepStrictEqual(msg, [
+			'1 notice  {\n\tfoo : {\n\t\tbar : [\n\t\t\t…\n\t\t]\n\t}\n}',
+			'2 notice  [\n\t[\n\t\t{\n\t\t\t…\n\t\t}\n\t]\n]'
 		]);
 	});
 
