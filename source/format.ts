@@ -1,7 +1,11 @@
-import { createToken, LogToken, LogTokens, token_type } from "./token";
-import { createScopeToken, isScopeToken } from "./parser/common";
-import { transformFail } from "./failure";
+import { createToken, LogToken, LogTokens, token_type } from './token';
+import { createScopeToken, isScopeToken } from './parser/common';
+import { transformFail } from './failure';
 
+
+type testDelimiterRule = (type:token_type|null) => boolean;
+type transformDelimiter = (depth:number) => string;
+type DelimiterRule = [ testDelimiterRule, testDelimiterRule, transformDelimiter ];
 
 type transformToken = (token:LogToken) => LogToken;
 
@@ -10,24 +14,68 @@ interface Transforms {
 }
 
 
-function isValueType(type:token_type) : boolean {
-	switch (type) {
-		case token_type.scalar_bool :
-		case token_type.scalar_int :
-		case token_type.scalar_float :
-		case token_type.scalar_inf :
-		case token_type.scalar_nan :
-		case token_type.scalar_string :
-		case token_type.object :
-		case token_type.object_array : return true;
-		default : return false;
-	}
+function any() {
+	return true;
 }
 
+function eqSolve(a:(token_type|null)[], b:token_type|null) {
+	return a.includes(b);
+}
+
+function eq(...a:(token_type|null)[]) {
+	return eqSolve.bind(null, a);
+}
+
+function zero() {
+	return '';
+}
+
+function one() {
+	return ' ';
+}
+
+function getLine(depth:number) {
+	return '\n'.padEnd(depth + 1, '\t');
+}
 
 function getSpacing(depth:number) {
-	return '\n'.padEnd(1 + depth, '\t');
+	return depth !== 0 ? getLine(depth) : '';
 }
+
+function prop(depth:number) {
+	return `,${ getLine(depth) }`;
+}
+
+const value = [
+	token_type.scalar_bool,
+	token_type.scalar_int,
+	token_type.scalar_float,
+	token_type.scalar_inf,
+	token_type.scalar_nan,
+	token_type.scalar_string,
+	token_type.object,
+	token_type.object_array
+];
+
+const delimiterRules:readonly DelimiterRule[] = [
+	[ eq(null), any, getSpacing ],
+	[ eq(token_type.count), eq(token_type.level), () => '|' ],
+	[ eq(token_type.count, token_type.level), any, one ],
+	[ eq(token_type.tag), eq(token_type.tag), () => ':' ],
+	[ any, eq(token_type.tag), () => ' .:' ],
+	[ eq(token_type.message_fragment), any, zero ],
+	[ any, eq(token_type.message_fragment), zero ],
+	[ eq(token_type.property_inherited), eq(token_type.property_name), one ],
+	[ any, eq(token_type.property_inherited, token_type.property_name), prop ],
+	[ any, eq(token_type.object_unresolved), d => `${ prop(d) }^` ],
+	[ eq(token_type.property_name), any, () => ' : ' ],
+	[ eq(...value), eq(...value), prop ],
+	[ any, eq(token_type.error_file), () => ' @'],
+	[ eq(token_type.error_line), eq(token_type.error_col), () => ':' ],
+	[ any, eq(token_type.error_col), () => ' :' ],
+	[ any, any, one ]
+];
+
 
 export function formatLevel(level:string) : string {
 	return level.padEnd(7);
@@ -69,20 +117,10 @@ export function formatCount(count:string) : string {
 	return `999${ map[map.length - 1][1] }`;
 }
 
-
 function getDelim(prev:token_type|null, next:token_type, depth:number) : string {
-	if (prev === null) return depth === 0 ? '' : getSpacing(depth);
-	else if (prev === token_type.count) return next === token_type.level ? '|' : ' ';
-	else if (prev === token_type.level) return ' ';
-	else if (next === token_type.tag) return prev === token_type.tag ? ':' : ' .:';
-	else if (prev === token_type.message_fragment || next === token_type.message_fragment) return '';
-	else if (prev === token_type.property_name) return ' : ';
-	else if (next === token_type.property_name) return `,${ depth === 0 ? ' ' : getSpacing(depth) }`;
-	else if (next === token_type.error_file) return ' @';
-	else if (next === token_type.error_col) return `${ prev !== token_type.error_line ? ' ' : '' }:`;
-	else if (isValueType(prev) && isValueType(next)) return `,${ depth === 0 ? ' ' : getSpacing(depth) }`;
+	const [_1, _2, transform] = delimiterRules.find(([ testPrev, testNext ]) => testPrev(prev) && testNext(next)) as DelimiterRule;
 
-	return ' ';
+	return transform(depth);
 }
 
 
@@ -109,20 +147,31 @@ function transformString(token:LogToken) : LogToken {
 	return createToken(token.type, s);
 }
 
+function transformInheritance(token:LogToken) : LogToken {
+	return createToken(token.type, `^${ token.content }`);
+}
+
 function transformReference(token:LogToken) : LogToken {
 	return createToken(token.type, `&${ token.content }`);
 }
 
+function transformUnresolved(token:LogToken) : LogToken {
+	return createToken(token.type, '…');
+}
+
+
+const transforms:Transforms = {
+	[ token_type.level ] : transformLevel,
+	[ token_type.count ] : transformCount,
+	[ token_type.scalar_string ] : transformString,
+	[ token_type.property_inherited ] : transformInheritance,
+	[ token_type.object_reference ] : transformReference,
+	[ token_type.object_unresolved ] : transformUnresolved,
+	[ token_type.error_message ] : transformString
+};
+
 
 export function tokensToString(tokens:LogTokens, depth:number = 0) : string {
-	const transforms:Transforms = {
-		[ token_type.level ] : transformLevel,
-		[ token_type.count ] : transformCount,
-		[ token_type.scalar_string ] : transformString,
-		[ token_type.object_reference ] : transformReference,
-		[ token_type.error_message ] : transformString
-	};
-
 	let prevType = null;
 	let message = '';
 
@@ -134,9 +183,9 @@ export function tokensToString(tokens:LogTokens, depth:number = 0) : string {
 		if (nextType in transforms) token = transforms[nextType](token);
 
 		if (isScopeToken(token)) {
-			if (nextType === token_type.object) message += `{${ tokensToString(token.children, depth + 1) }${ getSpacing(depth) }}`;
-			else if (nextType === token_type.object_array) message += `[${ tokensToString(token.children, depth + 1) }${ getSpacing(depth) }]`;
-			else if (nextType === token_type.object_bytes) message += `<${ formatBytes(token.children, depth + 1) }${ getSpacing(depth) }>`;
+			if (nextType === token_type.object) message += `{${ tokensToString(token.children, depth + 1) }${ getLine(depth) }}`;
+			else if (nextType === token_type.object_array) message += `[${ tokensToString(token.children, depth + 1) }${ getLine(depth) }]`;
+			else if (nextType === token_type.object_bytes) message += `<${ formatBytes(token.children, depth + 1) }${ getLine(depth) }>`;
 			else message += tokensToString(token.children);
 		}
 		else message += token.content;
