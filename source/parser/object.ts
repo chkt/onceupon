@@ -4,12 +4,6 @@ import { ParseContext } from '../parse';
 import { createScopeToken } from './common';
 
 
-interface ObjectProperty {
-	readonly value : unknown;
-	readonly depth : number;
-}
-
-
 export function parseNull() : LogTokens {
 	return [ createToken(token_type.object_null, 'null') ];
 }
@@ -31,14 +25,12 @@ export function parseObject(obj:object, context:ParseContext) : LogTokens {
 		) ];
 	}
 
-	const entries:Dict<ObjectProperty> = {};
+	const keys:Dict<number> = {};
 	let resolved = false;
 	let source:object|null = obj;
 
 	for (let i = 0; i < context.depthLeft; i += 1) {
-		for (const [ name, value ] of Object.entries(source)) {
-			if (!(name in entries)) entries[name] = { value, depth : i };
-		}
+		for (const key of Object.keys(source)) keys[key] = keys[key] ?? i;
 
 		source = Object.getPrototypeOf(source);
 
@@ -56,14 +48,23 @@ export function parseObject(obj:object, context:ParseContext) : LogTokens {
 		references : [ ...context.references, obj ]
 	};
 
-	for (const [ name, prop ] of Object.entries(entries)) {
-		if (prop === undefined) continue;
+	for (const [ name, depth ] of Object.entries(keys)) {
+		if (depth === undefined) continue;
+
+		let value:unknown;
+
+		try {
+			value = obj[name as keyof typeof obj];
+		}
+		catch (err) {
+			value = err;
+		}
 
 		items = [
 			...items,
-			...(prop.depth > 0 ? [ createToken(token_type.property_inherited, prop.depth.toFixed()) ] : []),
+			...(depth > 0 ? [ createToken(token_type.property_inherited, depth.toFixed()) ] : []),
 			createToken(token_type.property_name, name),
-			...childContext.inferAndParse(prop?.value)
+			...childContext.inferAndParse(value)
 		];
 	}
 

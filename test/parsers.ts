@@ -2,6 +2,9 @@ import * as assert from 'assert';
 import { describe, it } from 'mocha';
 
 import { compose } from '../source/compose';
+import { loggable_type } from '../source/type';
+import { createToken, token_type } from '../source/token';
+import { parsers } from '../source/parse';
 import { Log } from '../source/context';
 import { tokensToString } from '../source/format';
 import { createLogger } from '../source/logger';
@@ -168,6 +171,40 @@ describe('onceupon', () => {
 
 		assert.deepStrictEqual(msg, [
 			'1 notice  {\n\tfoo : 0,\n\t^1 bar : 1,\n\t^…\n}'
+		]);
+	});
+
+	it('should resolve computed prototype properties', async () => {
+		const msg:string[] = [];
+		const log = createLogger({
+			time : getIncrement(),
+			parsers : {
+				...parsers,
+				[loggable_type.error] : err => ([
+					createToken(token_type.error_name, err.name),
+					createToken(token_type.error_message, err.message)
+				])
+			},
+			handle : handle.bind(msg)
+		});
+
+		const p = {
+			get baz() {
+				if (!('foo' in this)) throw new Error('bang');
+				else return (this as { foo : number }).foo;
+			}
+		}
+		const o = Object.create(p, {
+			foo : { value : 1, enumerable : true},
+			bar : { get() { throw new Error('boom'); }, enumerable : true }
+		});
+
+		await log
+			.value(o)
+			.settle();
+
+		assert.deepStrictEqual(msg, [
+			'1 notice  {\n\tfoo : 1,\n\tbar : Error \'boom\',\n\t^1 baz : 1\n}'
 		]);
 	});
 
