@@ -13,7 +13,7 @@ const enum spidermonkey_match_location {
 }
 
 
-const stackParserJsCore = /^\s*([^@*]*)@(?:(\[native code])|(.+):(\d+):(\d+))\s*$/;
+const stackParserJsCore = /^\s*(?:([^@*]*)@)?(?:(\[native code])|(.+):(\d+):(\d+))\s*$/;
 
 const enum jscore_match_location {
 	message = 0,

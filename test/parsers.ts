@@ -378,6 +378,7 @@ describe('onceupon', () => {
 			.value(new JsCoreStackError('bang', 'foo@path/to/file:23:42\nbar@[native code]'))
 			.value(new JsCoreStackError('bang', '    foo@path/to/file:23:42    '))
 			.value(new JsCoreStackError('bang', 'foo@http://domain.tld/path/to/file:23:42'))
+			.value(new JsCoreStackError('bang', 'http://domain.tld/path/to/file:23:42'))
 			.value(new JsCoreStackError('bang', 'foo@[native code]'))
 			.settle();
 
@@ -386,7 +387,8 @@ describe('onceupon', () => {
 			"2 notice  JsCoreStackError 'bang' @path/to/file 23:42",
 			"3 notice  JsCoreStackError 'bang' @path/to/file 23:42",
 			"4 notice  JsCoreStackError 'bang' @http://domain.tld/path/to/file 23:42",
-			"5 notice  JsCoreStackError 'bang' @native ?:?"
+			"5 notice  JsCoreStackError 'bang' @http://domain.tld/path/to/file 23:42",
+			"6 notice  JsCoreStackError 'bang' @native ?:?"
 		]);
 	});
 
