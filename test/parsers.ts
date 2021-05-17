@@ -296,10 +296,10 @@ describe('onceupon', () => {
 		// tslint:disable-next-line:max-classes-per-file
 		class FileInfoError extends Error {
 			public fileName : string;
-			public lineNumber : string;
-			public columnNumber : string;
+			public lineNumber : number;
+			public columnNumber : number;
 
-			constructor(message:string, file:string, line:string, col:string) {
+			constructor(message:string, file:string, line:number, col:number) {
 				super(message);
 
 				this.name = 'SomeError';
@@ -310,7 +310,7 @@ describe('onceupon', () => {
 		}
 
 		await log
-			.value(new FileInfoError('foo', 'path/to/file', '1', '13'))
+			.value(new FileInfoError('foo', 'path/to/file', 1, 13))
 			.settle();
 
 		assert.deepStrictEqual(msg, [
@@ -416,6 +416,65 @@ describe('onceupon', () => {
 
 		assert.deepStrictEqual(msg, [
 			'1 notice  Error:OddTraceError \'foo\' <ODDTRACE|  1:23 /path/to/file foo  >'
+		]);
+	});
+
+	it('should gracefully handle misshaped Errors', async () => {
+		const msg:string[] = [];
+		const log = createLogger({
+			time : getIncrement(),
+			handle : handle.bind(msg)
+		});
+
+		const badProt = Object.create(Error.prototype, {
+			constructor : { value : undefined }
+		});
+		const emptyProt = Object.create(Error.prototype, {
+			constructor : { value : { name : '' }}
+		});
+		const errProt = Object.create(Error.prototype, {
+			constructor : { value : { name : 'FooError' }},
+		});
+		const badErr = Object.create(badProt, {
+			name : { value : undefined },
+			message : { value : undefined },
+			stack : { value : undefined }
+		});
+		const noConstructorErr = Object.create(badProt, {
+			name : { value : 'BarError' },
+			message : { value : 'foo' },
+			stack : { value : 'bar' }
+		});
+		const emptyConstructorErr = Object.create(emptyProt, {
+			name : { value : 'BarError' },
+			message : { value : 'foo' },
+			stack : { value : 'bar' }
+		});
+		const noNameErr = Object.create(errProt, {
+			name : { value : undefined },
+			message : { value : 'foo' },
+			stack : { value : 'bar' }
+		});
+		const emptyNameErr = Object.create(errProt, {
+			name : { value : '' },
+			message : { value : 'foo' },
+			stack : { value : 'bar' }
+		})
+
+		await log
+			.value(badErr)
+			.value(noConstructorErr)
+			.value(emptyConstructorErr)
+			.value(noNameErr)
+			.value(emptyNameErr)
+			.settle();
+
+		assert.deepStrictEqual(msg, [
+			"1 notice  Error <BADMSG|undefined>",
+			"2 notice  BarError:Error 'foo'",
+			"3 notice  BarError:Error 'foo'",
+			"4 notice  FooError 'foo'",
+			"5 notice  FooError 'foo'"
 		]);
 	});
 

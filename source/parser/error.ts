@@ -1,5 +1,5 @@
 import { createToken, LogTokens, token_type } from '../token';
-import { stackFail } from '../failure';
+import { messageFail, stackFail } from '../failure';
 
 
 const stackParserSpiderMonkey = /^\s*([^@]*)@(.+):(\d+):(\d+)\s*$/;
@@ -43,10 +43,15 @@ const enum v8_match_location {
 }
 
 
+function resolveString(value:unknown, fallback:string) : string {
+	return typeof value === 'string' && value.trim() !== '' ? value : fallback;
+}
+
+
 interface FileInfoError extends Error {
 	readonly fileName : string;
-	readonly lineNumber : string;
-	readonly columnNumber : string;
+	readonly lineNumber : number;
+	readonly columnNumber : number;
 }
 
 interface StackInfoError extends Error {
@@ -55,13 +60,15 @@ interface StackInfoError extends Error {
 
 
 function isFileInfoError(err:Error) : err is FileInfoError {
-	const ferr = err as FileInfoError;
+	const ferr = err as Partial<FileInfoError>;
 
-	return 'fileName' in ferr && 'lineNumber' in ferr && 'columnNumber' in ferr;
+	return typeof ferr.fileName === 'string'
+		&& typeof ferr.lineNumber === 'number'
+		&& typeof ferr.columnNumber === 'number';
 }
 
 function isStackInfoError(err:Error) : err is StackInfoError {
-	return 'stack' in (err as StackInfoError);
+	return typeof (err as Partial<StackInfoError>).stack === 'string';
 }
 
 
@@ -245,18 +252,20 @@ function parseErrorStack(err:StackInfoError, limit:number = Number.MAX_SAFE_INTE
 
 
 export function parseError(err:Error) : LogTokens {
-	const className = Object.getPrototypeOf(err).constructor.name;
+	const className = resolveString(Object.getPrototypeOf(err).constructor?.name, 'Error');
+	const errName = resolveString(err.name, className);
+	const messageType = typeof err.message;
 
 	const tokens = [
-		createToken(token_type.error_name, className === err.name ? err.name : `${ err.name }:${ className }`),
-		createToken(token_type.error_message, err.message)
+		createToken(token_type.error_name, errName === className ? errName : `${ errName }:${ className }`),
+		...(messageType === 'string' ? [ createToken(token_type.error_message, err.message) ] : messageFail(messageType))
 	];
 
 	if (isFileInfoError(err)) {
 		tokens.push(
 			createToken(token_type.error_file, err.fileName),
-			createToken(token_type.error_line, err.lineNumber),
-			createToken(token_type.error_col, err.columnNumber)
+			createToken(token_type.error_line, err.lineNumber.toFixed(0)),
+			createToken(token_type.error_col, err.columnNumber.toFixed(0))
 		);
 	}
 	else if (isStackInfoError(err)) {
