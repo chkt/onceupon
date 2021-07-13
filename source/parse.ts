@@ -3,7 +3,7 @@ import { Composition } from './compose';
 import { LogContext, LoggableData } from './context';
 import { LogTokens } from './token';
 import { parseFail } from './failure';
-import { parseBool, parseNumber, parseString, parseUndefined } from './parser/scalars';
+import { parseBigInt, parseBool, parseNumber, parseString, parseUndefined } from './parser/scalars';
 import { parseBytes } from './parser/buffer';
 import { parseArray, parseNull, parseObject } from './parser/object';
 import { parseMessage, parseComposition } from './parser/message';
@@ -61,6 +61,7 @@ export const parsers:Parsers = {
 	[ loggable_type.null ] : parseNull,
 	[ loggable_type.boolean ] : parseBool,
 	[ loggable_type.number ] : parseNumber,
+	[ loggable_type.bigint ] : parseBigInt,
 	[ loggable_type.string ] : parseString,
 	[ loggable_type.object ] : parseObject,
 	[ loggable_type.array ] : parseArray,

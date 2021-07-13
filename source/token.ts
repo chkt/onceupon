@@ -8,6 +8,7 @@ export const enum token_type {
 	scalar_undefined,
 	scalar_bool,
 	scalar_int,
+	scalar_bint,
 	scalar_float,
 	scalar_nan,
 	scalar_inf,

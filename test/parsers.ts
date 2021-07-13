@@ -108,6 +108,30 @@ describe('onceupon', () => {
 		]);
 	});
 
+	it('should log BigInts', async () => {
+		const msg:string[] = [];
+		const log = createLogger({
+			time : getIncrement(),
+			handle : handle.bind(msg)
+		});
+
+		await log
+			.value(BigInt(0))
+			.value(BigInt(1))
+			.value(BigInt(Number.MAX_SAFE_INTEGER))
+			.value(BigInt('18446744073709551615'))
+			.value(BigInt('-18446744073709551615'))
+			.settle();
+
+		assert.deepStrictEqual(msg, [
+			'1 notice  0n',
+			'2 notice  1n',
+			'3 notice  9007199254740991n',
+			'4 notice  18446744073709551615n',
+			'5 notice  -18446744073709551615n'
+		]);
+	});
+
 	it ('should log strings', async () => {
 		const msg:string[] = [];
 		const log = createLogger({

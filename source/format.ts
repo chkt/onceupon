@@ -137,6 +137,10 @@ function transformCount(token:LogToken) : LogToken {
 	}
 }
 
+function transformBigInt(token:LogToken) : LogToken {
+	return createToken(token.type, `${ token.content}n`);
+}
+
 function transformString(token:LogToken) : LogToken {
 	let s = token.content;
 
@@ -163,6 +167,7 @@ function transformUnresolved(token:LogToken) : LogToken {
 const transforms:Transforms = {
 	[ token_type.level ] : transformLevel,
 	[ token_type.count ] : transformCount,
+	[ token_type.scalar_bint ] : transformBigInt,
 	[ token_type.scalar_string ] : transformString,
 	[ token_type.property_inherited ] : transformInheritance,
 	[ token_type.object_reference ] : transformReference,

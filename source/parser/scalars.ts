@@ -28,10 +28,13 @@ export function parseNumber(n:number) : LogTokens {
 		const a = Math.abs(n);
 		s = a > 1e9 || a < 1e-6 ? n.toExponential() : n.toString();
 		t = token_type.scalar_float;
-
 	}
 
 	return [ createToken(t, s) ];
+}
+
+export function parseBigInt(n:BigInt) : LogTokens {
+	return [ createToken(token_type.scalar_bint, n.toString()) ];
 }
 
 export function parseString(s:string) : LogTokens {
