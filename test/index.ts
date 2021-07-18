@@ -17,6 +17,17 @@ import { createLogger, log_level } from '../source';
 type tokensToString = (tokens:LogTokens) => string;
 
 
+const formatterSettings:formater.FormatterSettings = {
+	clampBytes : Number.MAX_SAFE_INTEGER,
+	inlineDepth : 2,
+	inlineProperties : 2,
+	inlineElements : 2,
+	inlineBytes : 16,
+	bytesInGroup : 8,
+	bytesInLine : 16
+};
+
+
 class MockStream extends Writable {
 	public out : { chunk : any, encoding : string}[] = [];
 
@@ -470,7 +481,7 @@ describe('onceupon', () => {
 			time : getIncrement(),
 			aggregate : createTLAggregator(),
 			decorate : decorateTimeCountLevelLog,
-			handle : handle.bind(msg, formater.tokensToString)
+			handle : handle.bind(msg, tokens => formater.tokensToString(tokens, { ...formatterSettings, inlineDepth : 0 }))
 		});
 
 		await log
@@ -500,7 +511,7 @@ describe('onceupon', () => {
 			time : getIncrement(),
 			aggregate : createTLAggregator({ maxDelay : 100 }),
 			decorate : decorateTimeCountLevelLog,
-			handle : handle.bind(msg, formater.tokensToString)
+			handle : handle.bind(msg, tokens => formater.tokensToString(tokens, { ...formatterSettings, inlineDepth : 0 }))
 		});
 
 		log.message('foo');

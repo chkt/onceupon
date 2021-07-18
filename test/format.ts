@@ -1,8 +1,7 @@
 import * as assert from 'assert';
 import { describe, it } from 'mocha';
-
-import { createToken, token_type } from "../source/token";
-import { tokensToString } from "../source/format";
+import { createToken, token_type } from '../source/token';
+import { tokensToString } from '../source/format';
 
 
 function assertTokens(descs:ReadonlyArray<[token_type, string]>, result:string) : void {
@@ -10,7 +9,15 @@ function assertTokens(descs:ReadonlyArray<[token_type, string]>, result:string) 
 
 	for (const desc of descs) tokens.push(createToken(desc[0], desc[1]));
 
-	assert.strictEqual(tokensToString(tokens), result);
+	assert.strictEqual(tokensToString(tokens, {
+		clampBytes : Number.MAX_SAFE_INTEGER,
+		inlineDepth : 0,
+		inlineProperties : 0,
+		inlineElements : 0,
+		inlineBytes : 16,
+		bytesInGroup : 8,
+		bytesInLine : 16,
+	}), result);
 }
 
 
