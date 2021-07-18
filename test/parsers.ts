@@ -6,7 +6,7 @@ import { loggable_type } from '../source/type';
 import { createToken, token_type } from '../source/token';
 import { parsers } from '../source/parse';
 import { Log } from '../source/context';
-import { tokensToString } from '../source/format';
+import { FormatterConfig, tokensToString } from '../source/format';
 import { createLogger } from '../source/logger';
 
 
@@ -16,8 +16,17 @@ function getIncrement() {
 	return () => Promise.resolve(String(++i));
 }
 
-async function handle(this:string[], data:Log) : Promise<void> {
-	this.push(tokensToString(data.tokens));
+async function handle(this:string[], config:FormatterConfig, data:Log) : Promise<void> {
+	this.push(tokensToString(data.tokens, {
+		clampBytes : Number.MAX_SAFE_INTEGER,
+		inlineDepth : 0,
+		inlineProperties : 0,
+		inlineElements : 0,
+		inlineBytes : 16,
+		bytesInGroup : 8,
+		bytesInLine : 16,
+		...config
+	}));
 }
 
 
@@ -27,7 +36,7 @@ describe('onceupon', () => {
 		const log = createLogger({
 			tags : 'foo bar',
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		await log
@@ -46,7 +55,7 @@ describe('onceupon', () => {
 		const log = createLogger({
 			tags : 'foo bar',
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		await log
@@ -64,7 +73,7 @@ describe('onceupon', () => {
 		const msg:string[] = [];
 		const log = createLogger({
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		await log
@@ -112,7 +121,7 @@ describe('onceupon', () => {
 		const msg:string[] = [];
 		const log = createLogger({
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		await log
@@ -136,7 +145,7 @@ describe('onceupon', () => {
 		const msg:string[] = [];
 		const log = createLogger({
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		await log
@@ -162,7 +171,7 @@ describe('onceupon', () => {
 		const msg:string[] = [];
 		const log = createLogger({
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		await log
@@ -179,7 +188,7 @@ describe('onceupon', () => {
 		const log = createLogger({
 			maxDepth : 2,
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		const p2 = { foo : 2, baz : 2 };
@@ -209,7 +218,7 @@ describe('onceupon', () => {
 					createToken(token_type.error_message, err.message)
 				])
 			},
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		const p = {
@@ -237,7 +246,7 @@ describe('onceupon', () => {
 		const log = createLogger({
 			maxDepth : 2,
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		await log
@@ -253,7 +262,7 @@ describe('onceupon', () => {
 		const msg:string[] = [];
 		const log = createLogger({
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		const o2 = { bar : {} };
@@ -268,11 +277,57 @@ describe('onceupon', () => {
 		]);
 	});
 
+	it('should inline object properties to specified threshold', async () => {
+		const msg:string[] = [];
+		const log = createLogger({
+			time : getIncrement(),
+			handle : handle.bind(msg, {
+				inlineDepth : 2,
+				inlineProperties : 2
+			})
+		});
+
+		await log
+			.value({ foo : 1, bar : 2 })
+			.value({ foo : 1, bar : 2, baz : 3 })
+			.value({ foo : { bar : 2 }})
+			.value({ foo : { bar : { baz : 3 }}})
+			.value({ foo : { bar : 2, baz : 3 }})
+			.value({})
+			.settings({
+				maxDepth : 0
+			})
+			.value({})
+			.value({ foo : 1 })
+			.settings({
+				handle : handle.bind(msg, {
+					inlineDepth : 2,
+					inlineProperties : 0
+				})
+			})
+			.value({})
+			.value({ foo : 1 })
+			.settle();
+
+		assert.deepStrictEqual(msg, [
+			'1 notice  { foo : 1, bar : 2 }',
+			'2 notice  {\n\tfoo : 1,\n\tbar : 2,\n\tbaz : 3\n}',
+			'3 notice  { foo : { bar : 2 }}',
+			'4 notice  {\n\tfoo : { bar : { baz : 3 }}\n}',
+			'5 notice  {\n\tfoo : { bar : 2, baz : 3 }\n}',
+			'6 notice  {}',
+			'7 notice  {}',
+			'8 notice  {…}',
+			'9 notice  {\n}',
+			'10 notice  {\n\t…\n}'
+		]);
+	});
+
 	it('should log v8 errors', async () => {
 		const msg:string[] = [];
 		const log = createLogger({
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		class V8Error extends Error {
@@ -314,7 +369,7 @@ describe('onceupon', () => {
 		const msg:string[] = [];
 		const log = createLogger({
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		// tslint:disable-next-line:max-classes-per-file
@@ -346,7 +401,7 @@ describe('onceupon', () => {
 		const msg:string[] = [];
 		const log = createLogger({
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		// tslint:disable-next-line:max-classes-per-file
@@ -381,7 +436,7 @@ describe('onceupon', () => {
 		const msg:string[] = [];
 		const log = createLogger({
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		// tslint:disable-next-line:max-classes-per-file
@@ -420,7 +475,7 @@ describe('onceupon', () => {
 		const msg:string[] = [];
 		const log = createLogger({
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		// tslint:disable-next-line:max-classes-per-file
@@ -447,7 +502,7 @@ describe('onceupon', () => {
 		const msg:string[] = [];
 		const log = createLogger({
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		const badProt = Object.create(Error.prototype, {
@@ -506,7 +561,7 @@ describe('onceupon', () => {
 		const msg:string[] = [];
 		const log = createLogger({
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		await log
@@ -523,7 +578,7 @@ describe('onceupon', () => {
 		const log = createLogger({
 			maxDepth : 2,
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		await log
@@ -539,7 +594,7 @@ describe('onceupon', () => {
 		const msg:string[] = [];
 		const log = createLogger({
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		const a0:unknown[] = [];
@@ -555,16 +610,64 @@ describe('onceupon', () => {
 		]);
 	});
 
+	it('should inline array elements to specified threshold', async () => {
+		const msg:string[] = [];
+		const log = createLogger({
+			time : getIncrement(),
+			handle : handle.bind(msg, {
+				inlineDepth : 2,
+				inlineElements : 2
+			})
+		});
+
+		await log
+			.value([ 'foo', 'bar' ])
+			.value([ 'foo', 'bar', 'baz' ])
+			.value([[ 'foo' ]])
+			.value([[[ 'foo' ]]])
+			.value([[ 'foo', 'bar' ]])
+			.value([[ 'foo', 'bar' ], 'baz' ])
+			.value([])
+			.settings({
+				maxDepth : 0
+			})
+			.value([])
+			.value([ 'foo' ])
+			.settings({
+				handle : handle.bind(msg, {
+					inlineDepth : 2,
+					inlineElements : 0
+				})
+			})
+			.value([])
+			.value([ 'foo' ])
+			.settle();
+
+		assert.deepStrictEqual(msg, [
+			'1 notice  [ \'foo\', \'bar\' ]',
+			'2 notice  [\n\t\'foo\',\n\t\'bar\',\n\t\'baz\'\n]',
+			'3 notice  [[ \'foo\' ]]',
+			'4 notice  [\n\t[[ \'foo\' ]]\n]',
+			'5 notice  [[ \'foo\', \'bar\' ]]',
+			'6 notice  [\n\t[ \'foo\', \'bar\' ],\n\t\'baz\'\n]',
+			'7 notice  []',
+			'8 notice  []',
+			'9 notice  […]',
+			'10 notice  [\n]',
+			'11 notice  [\n\t…\n]'
+		]);
+	});
+
 	it('should resolve object/array combinations to specified depth', async () => {
 		const msg:string[] = [];
 		const log = createLogger({
 			maxDepth : 2,
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		await log
-			.value({ foo : { bar : []}})
+			.value({ foo : { bar : [ 'baz' ]}})
 			.value([[{ foo : 'bar' }]])
 			.settle();
 
@@ -574,26 +677,125 @@ describe('onceupon', () => {
 		]);
 	});
 
+	it('should inline object/array combinations to specified threshold', async () => {
+		const msg:string[] = [];
+		const log = createLogger({
+			time : getIncrement(),
+			handle : handle.bind(msg, {
+				inlineDepth : 2,
+				inlineProperties : 2,
+				inlineElements : 2
+			})
+		});
+
+		await log
+			.value({ foo : [ 'bar', 'baz' ], qux : 4 })
+			.value({ foo : [ 'bar', 'baz'], qux : [ 'fru' ]})
+			.value([{ foo : 1, bar : 2 }])
+			.value([{ foo : 1, bar : 2 }, { baz : 3 }])
+			.settle();
+
+		assert.deepStrictEqual(msg, [
+			'1 notice  { foo : [ \'bar\', \'baz\' ], qux : 4 }',
+			'2 notice  {\n\tfoo : [ \'bar\', \'baz\' ],\n\tqux : [ \'fru\' ]\n}',
+			'3 notice  [{ foo : 1, bar : 2 }]',
+			'4 notice  [\n\t{ foo : 1, bar : 2 },\n\t{ baz : 3 }\n]'
+		]);
+	});
+
 	it('should log Uint8Arrays', async () => {
 		const msg:string[] = [];
 		const log = createLogger({
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {
+				inlineBytes : 16
+			})
 		});
 
 		const data = [
 			0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-			240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255
+			32, 33, 126, 127, 160, 161, 172, 173, 249, 250, 251, 252, 253, 254, 255
 		];
 
 		await log
 			.value(Buffer.from(data))
 			.value(Uint8Array.of(...data))
+			.value(Buffer.from(data.slice(0, 16)))
+			.value(Buffer.from(data.slice(16)))
 			.settle()
 
+		const b1 =
+			'Buffer <' +
+			'\n\t00  00 01 02 03 04 05 06 07-08 09 0a 0b 0c 0d 0e 0f  •••••••• ••••••••' +
+			'\n\t10  20 21 7e 7f a0 a1 ac ad-f9 fa fb fc fd fe ff     ␣!~•⌒¡¬⌐ ùúûüýþÿ' +
+			'\n>';
+		const b2 =
+			'Uint8Array <' +
+			'\n\t00  00 01 02 03 04 05 06 07-08 09 0a 0b 0c 0d 0e 0f  •••••••• ••••••••' +
+			'\n\t10  20 21 7e 7f a0 a1 ac ad-f9 fa fb fc fd fe ff     ␣!~•⌒¡¬⌐ ùúûüýþÿ' +
+			'\n>';
+
 		assert.deepStrictEqual(msg, [
-			'1 notice  Buffer <\n\t00  00 01 02 03 04 05 06 07-08 09 0a 0b 0c 0d 0e 0f\n\t10  f0 f1 f2 f3 f4 f5 f6 f7-f8 f9 fa fb fc fd fe ff\n>',
-			'2 notice  Uint8Array <\n\t00  00 01 02 03 04 05 06 07-08 09 0a 0b 0c 0d 0e 0f\n\t10  f0 f1 f2 f3 f4 f5 f6 f7-f8 f9 fa fb fc fd fe ff\n>',
+			`1 notice  ${ b1 }`,
+			`2 notice  ${ b2 }`,
+			'3 notice  Buffer <00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f> ••••••••••••••••',
+			'4 notice  Buffer <20 21 7e 7f a0 a1 ac ad f9 fa fb fc fd fe ff> ␣!~•⌒¡¬⌐ùúûüýþÿ'
+		]);
+	});
+
+	it('should clamp Uint8Arrays to specified length', async () => {
+		const msg:string[] = [];
+		const log = createLogger({
+			maxBytes : 15,
+			time : getIncrement(),
+			handle : handle.bind(msg, {
+				inlineBytes : 26
+			})
+		});
+
+		const data = 'abcdefghijklmnopqrstuvwxyz';
+
+		await log
+			.value(Buffer.from(data))
+			.settings({
+				maxBytes : 33
+			})
+			.value(Buffer.from(data.repeat(2)))
+			.value(Buffer.from(data.repeat(3)))
+			.settings({
+				maxBytes : 27,
+				tailBytes : 0
+			})
+			.value(Buffer.from(data.repeat(2)))
+			.settle();
+
+		const b2 =
+			'Buffer <' +
+			'\n\t00  61 62 63 64 65 66 67 68-69 6a 6b 6c 6d 6e 6f 70  abcdefgh ijklmnop' +
+			'\n\t10  71 72 73 74 75 76 77 78-79 7a 61 62 63 64 65 66  qrstuvwx yzabcdef' +
+			'\n\t20  67…        …6b 6c 6d 6e-6f 70 71 72 73 74 75 76  g   klmn opqrstuv' +
+			'\n\t30  77 78 79 7a                                      wxyz' +
+			'\n>';
+
+		const b3 =
+			'Buffer <' +
+			'\n\t00  61 62 63 64 65 66 67 68-69 6a 6b 6c 6d 6e 6f 70  abcdefgh ijklmnop' +
+			'\n\t10  71 72 73 74 75 76 77 78-79 7a 61 62 63 64 65 66  qrstuvwx yzabcdef' +
+			'\n\t20  67…                                              g' +
+			'\n\t40 …6d 6e 6f 70 71 72 73 74-75 76 77 78 79 7a        mnopqrst uvwxyz' +
+			'\n>';
+
+		const b4 =
+			'Buffer <' +
+			'\n\t00  61 62 63 64 65 66 67 68-69 6a 6b 6c 6d 6e 6f 70  abcdefgh ijklmnop' +
+			'\n\t10  71 72 73 74 75 76 77 78-79 7a 61…                qrstuvwx yza' +
+			'\n>';
+
+		assert.deepStrictEqual(msg, [
+			'1 notice  Buffer <61 62 63 64 65 66 67 68 69 6a 6b 6c 6d 6e 6f…> abcdefghijklmno…',
+			`2 notice  ${ b2 }`,
+			`3 notice  ${ b3 }`,
+			`4 notice  ${ b4 }`
 		]);
 	});
 
@@ -601,7 +803,7 @@ describe('onceupon', () => {
 		const msg:string[] = [];
 		const log = createLogger({
 			time : getIncrement(),
-			handle : handle.bind(msg)
+			handle : handle.bind(msg, {})
 		});
 
 		await log
