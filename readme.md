@@ -38,12 +38,12 @@ The initializer supports extensive configuration:
 
 ```typescript
 import { createLogger, log_level } from '@chkt/onceupon';
-import { getTime} from "@chkt/onceupon/dist/time";
-import { inferType } from "@chkt/onceupon/dist/type";
-import { Parsers } from "@chkt/onceupon/dist/parse";
-import { attachEmitter } from "@chkt/onceupon/dist/aggregate";
-import { decorateTokens } from "@chkt/onceupon/dist/decorate";
-import { handleLog } from "@chkt/onceupon/dist/handler";
+import { getTime} from '@chkt/onceupon/dist/time';
+import { inferType } from '@chkt/onceupon/dist/type';
+import { Parsers } from '@chkt/onceupon/dist/parse';
+import { attachEmitter } from '@chkt/onceupon/dist/aggregate';
+import { decorateTokens } from '@chkt/onceupon/dist/decorate';
+import { handleLog } from '@chkt/onceupon/dist/handler';
 
 const logger = createLogger({
   threshold : log_level,
@@ -72,6 +72,9 @@ const enum log_level {
 interface LoggerConfig {
   readonly threshold : log_level;
   readonly tags : string;
+  readonly maxDepth : number;
+  readonly maxBytes : number;
+  readonly tailBytes : number;
   readonly infer : inferType;
   readonly parsers : Parsers;
   readonly time : getTime;
