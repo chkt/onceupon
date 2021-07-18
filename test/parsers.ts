@@ -222,9 +222,9 @@ describe('onceupon', () => {
 		});
 
 		const p = {
-			get baz() {
+			get baz() : number {
 				if (!('foo' in this)) throw new Error('bang');
-				else return (this as { foo : number }).foo;
+				else return (this as unknown as { foo : number }).foo;
 			}
 		}
 		const o = Object.create(p, {
