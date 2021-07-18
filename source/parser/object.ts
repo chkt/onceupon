@@ -9,7 +9,11 @@ export function parseNull() : LogTokens {
 }
 
 export function parseObject(obj:object, context:ParseContext) : LogTokens {
-	if (context.depthLeft <= 0) {
+	if (
+		Object.keys(obj).length === 0 &&
+		([Object.prototype, null].includes(Object.getPrototypeOf(obj)))
+	) return [ createScopeToken(token_type.object, []) ];
+	else if (context.depthLeft <= 0) {
 		return [ createScopeToken(
 			token_type.object,
 			[ createToken(token_type.object_unresolved, '') ]
@@ -74,7 +78,8 @@ export function parseObject(obj:object, context:ParseContext) : LogTokens {
 }
 
 export function parseArray(arr:unknown[], context:ParseContext) : LogTokens {
-	if (context.depthLeft <= 0) {
+	if (arr.length === 0) return [ createScopeToken(token_type.object_array, []) ];
+	else if (context.depthLeft <= 0) {
 		return [ createScopeToken(
 			token_type.object_array,
 			[ createToken(token_type.object_unresolved, '') ]
