@@ -1,6 +1,7 @@
-import { LogToken, LogTokens, token_type } from "./token";
+import { LogToken, LogTokens, token_type } from './token';
 
 
+// TODO: incompatible, rename to failureType in version 2.0
 export const enum failure_type {
 	no_parser = 'NOPARSE',
 	bad_message = 'BADMSG',
@@ -31,6 +32,6 @@ export function stackFail(line:string) : LogTokens {
 	return [ createFailureToken(createTokenContent(failure_type.odd_trace, line)) ];
 }
 
-export function transformFail(name:string, content:string) : LogTokens {
-	return [ createFailureToken(createTokenContent(failure_type.bad_transform, `[${ name }]${ content }`)) ];
+export function transformFail(name:string, content:string) : LogToken {
+	return createFailureToken(createTokenContent(failure_type.bad_transform, `[${ name }]${ content }`));
 }
