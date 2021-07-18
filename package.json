@@ -24,19 +24,19 @@
 	],
 	"main": "./dist/index.js",
 	"scripts": {
-		"prepublishOnly": "yarn upgrade && yarn outdated && yarn run test && yarn run lint && yarn run build",
+		"prepublishOnly": "yarn outdated && yarn run test && yarn run lint && yarn run build",
 		"lint": "./node_modules/tslint/bin/tslint -p tsconfig.json",
 		"test": "./node_modules/mocha/bin/mocha -r ts-node/register test/**/*.ts",
 		"build": "rm -rf ./dist/* && ./node_modules/typescript/bin/tsc"
 	},
 	"devDependencies": {
 		"@types/mocha": "^8.2",
-		"@types/node": "^15.3",
-		"mocha": "^8.2",
+		"@types/node": "^16.3",
+		"mocha": "^9.0",
 		"nyc": "^15.1",
-		"ts-node": "^9.1",
+		"ts-node": "^10.1",
 		"tslint": "^6.1",
-		"typescript": "^4.1"
+		"typescript": "^4.3"
 	},
 	"dependencies": {
 		"@chkt/continuity": "1.0.0-beta.4"
