@@ -1,3 +1,5 @@
+// TODO: incompatible, rename to logLevel in version 2.0
+// TODO: incompatible, change to string representation in version 2.0
 export const enum log_level {
 	fatal,
 	error,

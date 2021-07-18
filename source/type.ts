@@ -1,6 +1,7 @@
 import { Composition } from './compose';
 
 
+// TODO incompatible, rename to loggableType in version 2.0
 export const enum loggable_type {
 	any = 'any',
 	other = 'unid',

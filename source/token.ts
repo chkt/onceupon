@@ -1,3 +1,4 @@
+// TODO: incompatible, rename to tokenType in version 2.0
 export const enum token_type {
 	time,
 	level,
