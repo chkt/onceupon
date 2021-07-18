@@ -39,6 +39,8 @@ type parseUnknown = (loggable:unknown) => LogTokens;
 
 export interface ParseConfig {
 	readonly maxDepth : number;
+	readonly maxBytes : number;
+	readonly tailBytes : number;
 }
 
 export interface ParseHost {
@@ -51,6 +53,8 @@ export interface ParseHost {
 export interface ParseContext {
 	readonly context : LogContext;
 	readonly depthLeft : number;
+	readonly bytesHead : number;
+	readonly bytesTail : number;
 	readonly references : ReadonlyArray<unknown>;
 	readonly inferAndParse : parseUnknown;
 }
@@ -73,7 +77,9 @@ export const parsers:Parsers = {
 
 
 export function createParseConfig<T extends ParseConfig>(settings:T) : ParseConfig {
-	return { maxDepth : settings.maxDepth };
+	const { maxDepth, maxBytes, tailBytes } = settings;
+
+	return { maxDepth, maxBytes, tailBytes };
 }
 
 export function createParseHost(
@@ -98,6 +104,8 @@ export function createParseContext(host:ParseHost, context:LogContext) : ParseCo
 	return {
 		context,
 		depthLeft : host.settings.maxDepth,
+		bytesHead : host.settings.maxBytes,
+		bytesTail : host.settings.tailBytes,
 		references : [],
 		inferAndParse(loggable) {
 			const type = host.inferType(loggable);
