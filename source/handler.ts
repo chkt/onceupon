@@ -1,13 +1,23 @@
 import WritableStream = NodeJS.WritableStream;
-
 import { log_level } from './level';
 import { Log } from './context';
-import { tokensToString } from './format';
+import { createFormatter, FormatterConfig, formatTokens } from './format';
 
 
 export type handleLog = (data:Log) => Promise<void>;
 
 type Streams = { [P in log_level] : WritableStream };
+
+// TODO: incompatible, for use in version 2.0
+interface StreamConfig extends FormatterConfig {
+	readonly streams : Streams;
+}
+
+// TODO: incompatible, for use in version 2.0
+interface OutErrConfig extends FormatterConfig {
+	readonly out? : WritableStream;
+	readonly err? : WritableStream;
+}
 
 
 function sendMsgToConsole(fn:(msg:string) => any, msg:string) : Promise<void> {
@@ -15,8 +25,8 @@ function sendMsgToConsole(fn:(msg:string) => any, msg:string) : Promise<void> {
 }
 
 
-export function consoleHandler(data:Log) : Promise<void> {
-	const msg = tokensToString(data.tokens);
+function configuredConsoleHandler(format:formatTokens, data:Log) : Promise<void> {
+	const msg = format(data.tokens);
 
 	switch (data.context.level) {
 		case log_level.fatal:
@@ -31,9 +41,21 @@ export function consoleHandler(data:Log) : Promise<void> {
 	return Promise.reject();
 }
 
-export function createStreamHandler(streams:Streams) : handleLog {
+// TODO: deprecated, remove for 2.0
+export function consoleHandler(data:Log) : Promise<void> {
+	return configuredConsoleHandler(createFormatter(), data);
+}
+
+export function createConsoleHandler(config:FormatterConfig = {}) : handleLog {
+	return configuredConsoleHandler.bind(null, createFormatter(config));
+}
+
+// TODO: incompatible, change invocation to ({ streams, ...opts }:StreamConfig) for version 2.0
+export function createStreamHandler(streams:Streams, opts:FormatterConfig = {}) : handleLog {
+	const format = createFormatter(opts);
+
 	return data => {
-		const msg = tokensToString(data.tokens);
+		const msg = format(data.tokens);
 		const stream = streams[data.context.level];
 
 		return new Promise((resolve, reject) => {
@@ -42,17 +64,15 @@ export function createStreamHandler(streams:Streams) : handleLog {
 	};
 }
 
-export function createOutErrHandler(
-	out:WritableStream = process.stdout,
-	err:WritableStream = process.stderr
-) : handleLog {
+// TODO: incompatible, change invocation to ({ out, err, ...opts }):OutErrConfig) for version 2.0
+export function createOutErrHandler(out:WritableStream = process.stdout, err:WritableStream = process.stderr, opts:FormatterConfig = {}) : handleLog {
 	return createStreamHandler({
-		[ log_level.fatal ] : err,
-		[ log_level.error ] : err,
-		[ log_level.warn ] : err,
-		[ log_level.notice ] : out,
-		[ log_level.info ] : out,
-		[ log_level.verbose ] : out,
-		[ log_level.debug ] : out
-	});
+		[log_level.fatal]: err,
+		[log_level.error]: err,
+		[log_level.warn]: err,
+		[log_level.notice]: out,
+		[log_level.info]: out,
+		[log_level.verbose]: out,
+		[log_level.debug]: out
+	}, opts);
 }
