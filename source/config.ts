@@ -8,7 +8,7 @@ import { createParseConfig, createParseHost, getParser, ParseConfig, ParseHost, 
 import { Aggregator, attachEmitter } from './aggregate';
 import { createNoopAggregator } from './aggregator/noop';
 import { decorateTimeLevelLog, decorateTokens } from './decorate';
-import { consoleHandler, handleLog } from './handler';
+import { createConsoleHandler, handleLog } from './handler';
 
 
 export interface LoggerConfig extends ParseConfig {
@@ -74,12 +74,14 @@ export function getDefaultConfig() : LoggerConfig {
 		threshold : log_level.notice,
 		tags : '',
 		maxDepth : Number.MAX_SAFE_INTEGER,
+		maxBytes : Number.MAX_SAFE_INTEGER,
+		tailBytes : 16,
 		infer : getType,
 		parsers,
 		decorate : decorateTimeLevelLog,
 		time : nowToUtcIso,
 		aggregate : createNoopAggregator(),
-		handle : consoleHandler,
+		handle : createConsoleHandler()
 	};
 }
 
